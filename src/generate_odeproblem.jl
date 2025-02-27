@@ -2,6 +2,28 @@
 using SciMLBase
 # include("types_and_related_functions.jl")
 
+
+
+"""
+    make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
+
+Construct an ODEProblem for simulating a metabolic pathway.
+
+# Arguments
+- `metabolic_pathway::MetabolicPathway`: A structure that defines the metabolic pathway, including the substrates, products, and related reaction details.
+- `init_cond::AbstractArray`: The initial conditions for the metabolites.
+- `tspan::Tuple{<:Number, <:Number}`: A tuple specifying the start and end times for the simulation.
+- `params::AbstractArray`: Parameters used in the metabolic reactions (e.g., kinetic constants).
+
+# Returns
+An `ODEProblem` instance that encapsulates the differential equations governing the metabolic pathway. This problem can be solved using ODE solvers from SciMLBase.
+
+# Details
+The returned ODEProblem uses `metabolicpathway_odes!` to compute the time evolution of metabolite concentrations
+by adjusting their rates based on enzyme kinetics defined in `enzyme_rates`. Ensure that `metabolic_pathway`,
+`init_cond`, and `params` have matching entries for substrates, products, and parameters for correct simulation.
+
+"""
 function make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
     #test that the pathway was assembled correctly
     #assert that metabs names overlap with metabolic_pathway substrates and products
