@@ -7,6 +7,8 @@ struct MetabolicPathway{ConstMetabs,Enzs} end
 
 struct Enzyme{Name,Subs,Prods} end
 
+rate(enzyme::Enzyme, x, y) = error("rate function not defined for enzyme: $enzyme")
+
 @inline @generated _generate_enzymes(
     metab_path::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = map(Enz -> Enzyme{Enz...}(), Enzs)

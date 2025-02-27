@@ -1,6 +1,6 @@
 #TODO: add dependence on SciMLBase or wherever ODEProblem is defined
 using SciMLBase
-include("types_and_related_functions.jl")
+# include("types_and_related_functions.jl")
 
 function make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
     #test that the pathway was assembled correctly
