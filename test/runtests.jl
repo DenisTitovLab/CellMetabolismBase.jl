@@ -1,14 +1,14 @@
 using CellMetabolismBase
 using Test
-using Aqua
-using JET
+using TestItemRunner
 
-@testset "CellMetabolismBase.jl" begin
-    @testset "Code quality (Aqua.jl)" begin
-        Aqua.test_all(CellMetabolismBase)
-    end
-    @testset "Code linting (JET.jl)" begin
-        JET.test_package(CellMetabolismBase; target_defined_modules = true)
-    end
-    # Write your tests here.
+@testitem "Code quality (Aqua.jl)" begin
+    using Aqua
+    Aqua.test_all(CellMetabolismBase)
 end
+@testitem "Code linting (JET.jl)" begin
+    using JET
+    JET.test_package(CellMetabolismBase; target_defined_modules=true)
+end
+
+@run_package_tests
