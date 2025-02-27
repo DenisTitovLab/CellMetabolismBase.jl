@@ -11,9 +11,9 @@ Construct an ODEProblem for simulating a metabolic pathway.
 
 # Arguments
 - `metabolic_pathway::MetabolicPathway`: A structure that defines the metabolic pathway, including the substrates, products, and related reaction details.
-- `init_cond::AbstractArray`: The initial conditions for the metabolites.
+- `init_cond::LArray`: The initial conditions for the metabolites.
 - `tspan::Tuple{<:Number, <:Number}`: A tuple specifying the start and end times for the simulation.
-- `params::AbstractArray`: Parameters used in the metabolic reactions (e.g., kinetic constants).
+- `params::LArray`: Parameters used in the metabolic reactions (e.g., kinetic constants).
 
 # Returns
 An `ODEProblem` instance that encapsulates the differential equations governing the metabolic pathway. This problem can be solved using ODE solvers from SciMLBase.
