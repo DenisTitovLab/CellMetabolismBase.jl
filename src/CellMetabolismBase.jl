@@ -1,8 +1,11 @@
 module CellMetabolismBase
 
-include("metabolicpathway_and_enzyme_types_and_related_functions.jl")
-include("generate_odeproblem.jl")
+include("MetabolicPathway_and_Enzyme_types_and_related_functions.jl")
+include("make_ODEProblem.jl")
 
-export make_ODEProblem, MetabolicPathway, Enzyme
+export make_ODEProblem
+export MetabolicPathway
+export Enzyme
+export rate
 
 end

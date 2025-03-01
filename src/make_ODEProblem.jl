@@ -1,8 +1,4 @@
-#TODO: add dependence on SciMLBase or wherever ODEProblem is defined
 using SciMLBase
-# include("types_and_related_functions.jl")
-
-
 
 """
     make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
@@ -22,7 +18,6 @@ An `ODEProblem` instance that encapsulates the differential equations governing 
 The returned ODEProblem uses `metabolicpathway_odes!` to compute the time evolution of metabolite concentrations
 by adjusting their rates based on enzyme kinetics defined in `enzyme_rates`. Ensure that `metabolic_pathway`,
 `init_cond`, and `params` have matching entries for substrates, products, and parameters for correct simulation.
-
 """
 function make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
     #test that the pathway was assembled correctly
@@ -63,5 +58,47 @@ end
 
 function enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
     enzymes = _generate_enzymes(metab_path)
-    return map(enzyme -> rate(enzyme, metabs, params), enzymes)
+    return map(enzyme -> CellMetabolismBase.rate(enzyme, metabs, params), enzymes)
+end
+
+@inline @generated _generate_enzymes(
+    metab_path::MetabolicPathway{ConstMetabs,Enzs},
+) where {ConstMetabs,Enzs} = map(Enz -> Enzyme{Enz...}(), Enzs)
+
+@inline @generated function _substrate_indxs(
+    metabs::LArray{T,1,Vector{T},Syms},
+    metab_path::MetabolicPathway{ConstMetabs,Enzs},
+) where {T,Syms,ConstMetabs,Enzs}
+    indxs = Vector{Vector{Int}}()
+    substr_names = map(Base.Fix2(getindex, 2), Enzs)
+    for subsrt in substr_names
+        temp_indxs = Int[]
+        for m in subsrt
+            if m ∉ ConstMetabs
+                i = findfirst(==(m), Syms)
+                push!(temp_indxs, i)
+            end
+        end
+        push!(indxs, temp_indxs)
+    end
+    return indxs
+end
+
+@inline @generated function _product_indxs(
+    metabs::LArray{T,1,Vector{T},Syms},
+    metab_path::MetabolicPathway{ConstMetabs,Enzs},
+) where {T,Syms,ConstMetabs,Enzs}
+    indxs = Vector{Vector{Int}}()
+    prod_names = map(Base.Fix2(getindex, 3), Enzs)
+    for prod in prod_names
+        temp_indxs = Int[]
+        for m in prod
+            if m ∉ ConstMetabs
+                i = findfirst(==(m), Syms)
+                push!(temp_indxs, i)
+            end
+        end
+        push!(indxs, temp_indxs)
+    end
+    return indxs
 end
