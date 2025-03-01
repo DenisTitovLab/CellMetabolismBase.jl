@@ -5,9 +5,9 @@
         (:A_media,),
         (
             (:Enz1, (:A_media,), (:A,)),
-            (:Enz2, (:A,), (:B,)),
+            (:Enz2, (:A,), (:B,:B,)),
             (:Enz3, (:B,), (:C,)),
-            (:Enz4, (:C,), (:D,)),
+            (:Enz4, (:C,:C), (:D,)),
         ),
     }()
 
@@ -15,17 +15,17 @@
         return params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq) /
                (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
     end
-    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz2,(:A,),(:B,)}, metabs, params)
-        return params.Enz2_Vmax * (metabs.A - metabs.B / params.Enz2_Keq) /
-               (1 + metabs.A / params.Enz2_K_A + metabs.B / params.Enz2_K_B)
+    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz2,(:A,),(:B,:B)}, metabs, params)
+        return params.Enz2_Vmax * (metabs.A - metabs.B^2 / params.Enz2_Keq) /
+               (1 + metabs.A / params.Enz2_K_A + metabs.B^2 / params.Enz2_K_B)
     end
     function CellMetabolismBase.rate(enzyme::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
         return params.Enz3_Vmax * (metabs.B - metabs.C / params.Enz3_Keq) /
                (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_K_C)
     end
-    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz4,(:C,),(:D,)}, metabs, params)
-        return params.Enz4_Vmax * (metabs.C - metabs.D / params.Enz4_Keq) /
-               (1 + metabs.C / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
+    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz4,(:C,:C),(:D,)}, metabs, params)
+        return params.Enz4_Vmax * (metabs.C^2 - metabs.D / params.Enz4_Keq) /
+               (1 + metabs.C^2 / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
     end
 
 
@@ -34,23 +34,23 @@
                (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
     end
     function rate_enz2(metabs, params)
-        return params.Enz2_Vmax * (metabs.A - metabs.B / params.Enz2_Keq) /
-               (1 + metabs.A / params.Enz2_K_A + metabs.B / params.Enz2_K_B)
+        return params.Enz2_Vmax * (metabs.A - metabs.B^2 / params.Enz2_Keq) /
+               (1 + metabs.A / params.Enz2_K_A + metabs.B^2 / params.Enz2_K_B)
     end
     function rate_enz3(metabs, params)
         return params.Enz3_Vmax * (metabs.B - metabs.C / params.Enz3_Keq) /
                (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_K_C)
     end
     function rate_enz4(metabs, params)
-        return params.Enz4_Vmax * (metabs.C - metabs.D / params.Enz4_Keq) /
-               (1 + metabs.C / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
+        return params.Enz4_Vmax * (metabs.C^2 - metabs.D / params.Enz4_Keq) /
+               (1 + metabs.C^2 / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
     end
 
     function test_odes(dmetabs, metabs, params, t)
         dmetabs.A_media = 0.0
         dmetabs.A = rate_enz1(metabs, params) - rate_enz2(metabs, params)
-        dmetabs.B = rate_enz2(metabs, params) - rate_enz3(metabs, params)
-        dmetabs.C = rate_enz3(metabs, params) - rate_enz4(metabs, params)
+        dmetabs.B = 2*rate_enz2(metabs, params) - rate_enz3(metabs, params)
+        dmetabs.C = rate_enz3(metabs, params) - 2*rate_enz4(metabs, params)
         dmetabs.D = rate_enz4(metabs, params)
         return nothing
     end
@@ -104,11 +104,11 @@
     @test mean(package_benchmark_result.times) <= 10_000_000 #ns
     @test package_benchmark_result.allocs < 20_000
 
-    @test (manual_benchmark_result.allocs + 1) >= package_benchmark_result.allocs
+    @test manual_benchmark_result.allocs >= package_benchmark_result.allocs
 
     println("Manual ODE solve=$(round(mean(manual_benchmark_result.times)/1_000_000; sigdigits=2))ms")
     println("Manual ODE allocations=$(manual_benchmark_result.allocs)")
-    println("Manual ODE solve=$(round(mean(package_benchmark_result.times)/1_000_000; sigdigits=2))ms")
+    println("Package ODE solve=$(round(mean(package_benchmark_result.times)/1_000_000; sigdigits=2))ms")
     println("Package ODE allocations=$(package_benchmark_result.allocs)")
 
 end

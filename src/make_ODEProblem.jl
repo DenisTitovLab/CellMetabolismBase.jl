@@ -41,19 +41,45 @@ function metabolicpathway_odes!(
 )
     propertynames(metabs) == propertynames(dmetabs) ||
         error("metabs and dmetabs must have the same propertynames")
-    dmetabs .= zero(eltype(dmetabs))
-    substr_indxs = _substrate_indxs(metabs, metab_path)
-    prod_indxs = _product_indxs(metabs, metab_path)
-    rates = enzyme_rates(metab_path, metabs, params)
-    @inbounds for (e, rate) in enumerate(rates)
-        for i in substr_indxs[e]
-            dmetabs[i] -= rate
-        end
-        for k in prod_indxs[e]
-            dmetabs[k] += rate
-        end
-    end
+    enz_rates = enzyme_rates(metab_path, metabs, params)
+    update_dmetabs!(metab_path, dmetabs, enz_rates)
     return nothing
+end
+
+@inline @generated function update_dmetabs!(
+    metab_pathway::MetabolicPathway{ConstMetabs,Enzs},
+    dmetabs::LArray{T,1,Vector{T},Syms},
+    rates::NTuple{N},
+) where {ConstMetabs,Enzs,T,Syms,N}
+    temp = []
+    for metab in Syms
+        temp_dmetab = :(0.0)
+        if metab ∉ ConstMetabs
+            for enz in Enzs
+                if metab in enz[3]
+                    stoich_coeff = sum(metab .== enz[3])
+                    temp_dmetab = Expr(
+                        :call,
+                        :+,
+                        temp_dmetab,
+                        :(rates[$(findfirst(==(enz), Enzs))] * $stoich_coeff),
+                    )
+                end
+                if metab in enz[2]
+                    stoich_coeff = sum(metab .== enz[2])
+                    temp_dmetab = Expr(
+                        :call,
+                        :-,
+                        temp_dmetab,
+                        :(rates[$(findfirst(==(enz), Enzs))] * $stoich_coeff),
+                    )
+                end
+            end
+        end
+        push!(temp, :(dmetabs.$metab = $temp_dmetab))
+    end
+    expr = Expr(:block, temp..., :(return nothing))
+    return expr
 end
 
 function enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
@@ -64,41 +90,3 @@ end
 @inline @generated _generate_enzymes(
     metab_path::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = map(Enz -> Enzyme{Enz...}(), Enzs)
-
-@inline @generated function _substrate_indxs(
-    metabs::LArray{T,1,Vector{T},Syms},
-    metab_path::MetabolicPathway{ConstMetabs,Enzs},
-) where {T,Syms,ConstMetabs,Enzs}
-    indxs = Vector{Vector{Int}}()
-    substr_names = map(Base.Fix2(getindex, 2), Enzs)
-    for subsrt in substr_names
-        temp_indxs = Int[]
-        for m in subsrt
-            if m ∉ ConstMetabs
-                i = findfirst(==(m), Syms)
-                push!(temp_indxs, i)
-            end
-        end
-        push!(indxs, temp_indxs)
-    end
-    return indxs
-end
-
-@inline @generated function _product_indxs(
-    metabs::LArray{T,1,Vector{T},Syms},
-    metab_path::MetabolicPathway{ConstMetabs,Enzs},
-) where {T,Syms,ConstMetabs,Enzs}
-    indxs = Vector{Vector{Int}}()
-    prod_names = map(Base.Fix2(getindex, 3), Enzs)
-    for prod in prod_names
-        temp_indxs = Int[]
-        for m in prod
-            if m ∉ ConstMetabs
-                i = findfirst(==(m), Syms)
-                push!(temp_indxs, i)
-            end
-        end
-        push!(indxs, temp_indxs)
-    end
-    return indxs
-end
