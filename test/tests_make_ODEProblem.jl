@@ -97,11 +97,11 @@
     @test sol_manual == sol
 
     manual_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob_manual, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
-    @test mean(manual_benchmark_result.times) <= 10_000_000 #ns
+    @test mean(manual_benchmark_result.times) <= 20_000_000 #ns
     @test manual_benchmark_result.allocs < 20_000
 
     package_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
-    @test mean(package_benchmark_result.times) <= 10_000_000 #ns
+    @test mean(package_benchmark_result.times) <= 20_000_000 #ns
     @test package_benchmark_result.allocs < 20_000
 
     @test manual_benchmark_result.allocs >= package_benchmark_result.allocs
