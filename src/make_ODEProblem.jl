@@ -42,51 +42,41 @@ function metabolicpathway_odes!(
     propertynames(metabs) == propertynames(dmetabs) ||
         error("metabs and dmetabs must have the same propertynames")
     enz_rates = enzyme_rates(metab_path, metabs, params)
-    update_dmetabs!(metab_path, dmetabs, enz_rates)
+    calculate_dmetabs_from_enz_rates!(metab_path, dmetabs, enz_rates)
     return nothing
 end
 
-@inline @generated function update_dmetabs!(
+@inline @generated function calculate_dmetabs_from_enz_rates!(
     metab_pathway::MetabolicPathway{ConstMetabs,Enzs},
     dmetabs::LArray{T,1,Vector{T},Syms},
     rates::NTuple{N},
 ) where {ConstMetabs,Enzs,T,Syms,N}
     temp = []
     for metab in Syms
-        temp_dmetab = :(0.0)
+        dmetab = :(0.0)
         if metab ∉ ConstMetabs
             for enz in Enzs
-                if metab in enz[3]
-                    stoich_coeff = sum(metab .== enz[3])
-                    temp_dmetab = Expr(
-                        :call,
-                        :+,
-                        temp_dmetab,
-                        :(rates[$(findfirst(==(enz), Enzs))] * $stoich_coeff),
-                    )
-                end
                 if metab in enz[2]
                     stoich_coeff = sum(metab .== enz[2])
-                    temp_dmetab = Expr(
-                        :call,
-                        :-,
-                        temp_dmetab,
-                        :(rates[$(findfirst(==(enz), Enzs))] * $stoich_coeff),
-                    )
+                    dmetab = :($dmetab - rates[$(findfirst(==(enz), Enzs))] * $stoich_coeff)
+                end
+                if metab in enz[3]
+                    stoich_coeff = sum(metab .== enz[3])
+                    dmetab = :($dmetab + rates[$(findfirst(==(enz), Enzs))] * $stoich_coeff)
                 end
             end
         end
-        push!(temp, :(dmetabs.$metab = $temp_dmetab))
+        push!(temp, :(dmetabs.$metab = $dmetab))
     end
     expr = Expr(:block, temp..., :(return nothing))
     return expr
 end
 
 function enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
-    enzymes = _generate_enzymes(metab_path)
+    enzymes = _generate_Enzymes(metab_path)
     return map(enzyme -> CellMetabolismBase.rate(enzyme, metabs, params), enzymes)
 end
 
-@inline @generated _generate_enzymes(
+@inline @generated _generate_Enzymes(
     metab_path::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = map(Enz -> Enzyme{Enz...}(), Enzs)
