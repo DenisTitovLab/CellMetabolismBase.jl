@@ -1,3 +1,6 @@
 /Manifest.toml
 /docs/Manifest.toml
 /docs/build/
+
+# Do not track Julia VSCode code coverage files
+*.cov
