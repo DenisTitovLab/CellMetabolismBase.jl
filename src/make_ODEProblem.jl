@@ -47,7 +47,7 @@ function metabolicpathway_odes!(
 end
 
 @inline @generated function calculate_dmetabs_from_enz_rates!(
-    metab_pathway::MetabolicPathway{ConstMetabs,Enzs},
+    ::MetabolicPathway{ConstMetabs,Enzs},
     dmetabs::LArray{T,1,Vector{T},Syms},
     rates::NTuple{N},
 ) where {ConstMetabs,Enzs,T,Syms,N}
@@ -77,6 +77,6 @@ function enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArr
     return map(enzyme -> CellMetabolismBase.rate(enzyme, metabs, params), enzymes)
 end
 
-@inline @generated _generate_Enzymes(
-    metab_path::MetabolicPathway{ConstMetabs,Enzs},
-) where {ConstMetabs,Enzs} = map(Enz -> Enzyme{Enz...}(), Enzs)
+_generate_Enzymes(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+) where {ConstMetabs,Enzs} = map(Enz -> Enzyme(Enz...), Enzs)

@@ -1,29 +1,29 @@
 @testitem "make_ODEProblem" begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
 
-    test_pathway = MetabolicPathway{
+    test_pathway = MetabolicPathway(
         (:A_media,),
         (
             (:Enz1, (:A_media,), (:A,)),
-            (:Enz2, (:A,), (:B,:B,)),
+            (:Enz2, (:A,), (:B, :B,)),
             (:Enz3, (:B,), (:C,)),
-            (:Enz4, (:C,:C), (:D,)),
+            (:Enz4, (:C, :C), (:D,)),
         ),
-    }()
+    )
 
-    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
+    function CellMetabolismBase.rate(::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
         return params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq) /
                (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
     end
-    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz2,(:A,),(:B,:B)}, metabs, params)
+    function CellMetabolismBase.rate(::Enzyme{:Enz2,(:A,),(:B, :B)}, metabs, params)
         return params.Enz2_Vmax * (metabs.A - metabs.B^2 / params.Enz2_Keq) /
                (1 + metabs.A / params.Enz2_K_A + metabs.B^2 / params.Enz2_K_B)
     end
-    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
+    function CellMetabolismBase.rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
         return params.Enz3_Vmax * (metabs.B - metabs.C / params.Enz3_Keq) /
                (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_K_C)
     end
-    function CellMetabolismBase.rate(enzyme::Enzyme{:Enz4,(:C,:C),(:D,)}, metabs, params)
+    function CellMetabolismBase.rate(::Enzyme{:Enz4,(:C, :C),(:D,)}, metabs, params)
         return params.Enz4_Vmax * (metabs.C^2 - metabs.D / params.Enz4_Keq) /
                (1 + metabs.C^2 / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
     end
@@ -46,11 +46,11 @@
                (1 + metabs.C^2 / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
     end
 
-    function test_odes(dmetabs, metabs, params, t)
+    function test_odes!(dmetabs, metabs, params, t)
         dmetabs.A_media = 0.0
         dmetabs.A = rate_enz1(metabs, params) - rate_enz2(metabs, params)
-        dmetabs.B = 2*rate_enz2(metabs, params) - rate_enz3(metabs, params)
-        dmetabs.C = rate_enz3(metabs, params) - 2*rate_enz4(metabs, params)
+        dmetabs.B = 2 * rate_enz2(metabs, params) - rate_enz3(metabs, params)
+        dmetabs.C = rate_enz3(metabs, params) - 2 * rate_enz4(metabs, params)
         dmetabs.D = rate_enz4(metabs, params)
         return nothing
     end
@@ -76,17 +76,48 @@
         Enz4_K_D=1.0,
     )
 
+    dmetabs_test_calc = @LArray rand(5) (:A_media, :A, :B, :C, :D)
+    rates = (1.0, 0.5, 0.3, 0.2)  # Rates for Enz1, Enz2, Enz3, Enz4
+    CellMetabolismBase.calculate_dmetabs_from_enz_rates!(test_pathway, dmetabs_test_calc, rates)
+    @test dmetabs_test_calc.A_media ≈ 0.0  # Constant metabolite should not change
+    @test dmetabs_test_calc.A ≈ 1.0 - 0.5  # Produced by Enz1, consumed by Enz2
+    @test dmetabs_test_calc.B ≈ 2 * 0.5 - 0.3  # Produced 2x by Enz2, consumed by Enz3
+    @test dmetabs_test_calc.C ≈ 0.3 - 2 * 0.2  # Produced by Enz3, consumed 2x by Enz4
+    @test dmetabs_test_calc.D ≈ 0.2  # Produced by Enz4
+
+    dmetabs = @LArray rand(5) (:A_media, :A, :B, :C, :D)
+    dmetabs_expected = @LArray rand(5) (:A_media, :A, :B, :C, :D)
+    CellMetabolismBase.metabolicpathway_odes!(test_pathway, dmetabs, metabs, params, 0.0)
+    test_odes!(dmetabs_expected, metabs, params, 0.0)
+    @test dmetabs == dmetabs_expected
+
     benchmark_result = @benchmark CellMetabolismBase.metabolicpathway_odes!($test_pathway, $dmetabs, $metabs, $params, 0.0)
     @test mean(benchmark_result.times) <= 200 #ns
     @test benchmark_result.allocs == 0
 
-    benchmark_result = @benchmark test_odes($dmetabs, $metabs, $params, 0.0)
+    benchmark_result = @benchmark test_odes!($dmetabs, $metabs, $params, 0.0)
     @test mean(benchmark_result.times) <= 200 #ns
     @test benchmark_result.allocs == 0
 
-    prob_manual = ODEProblem(test_odes, metabs, (0.0, 1e6), params)
+    prob_manual = ODEProblem(test_odes!, metabs, (0.0, 1e6), params)
     prob = make_ODEProblem(test_pathway, metabs, (0.0, 1e6), params)
     @test prob isa ODEProblem
+    @test prob.tspan == (0.0, 1e6)
+    @test prob.u0 == metabs
+    @test prob.p == params
+
+    enzymes = CellMetabolismBase._generate_Enzymes(test_pathway)
+    manual_benchmark_result = @benchmark CellMetabolismBase._generate_Enzymes($test_pathway)
+    @test mean(manual_benchmark_result.times) <= 10 #ns
+    @test manual_benchmark_result.allocs == 0
+    @test enzymes isa Tuple{Vararg{Enzyme}}
+    @test length(enzymes) == 4
+    @test enzymes[1] == Enzyme{:Enz1,(:A_media,),(:A,)}()
+    @test enzymes[2] == Enzyme{:Enz2,(:A,),(:B, :B)}()
+    @test enzymes[3] == Enzyme{:Enz3,(:B,),(:C,)}()
+    @test enzymes[4] == Enzyme{:Enz4,(:C, :C),(:D,)}()
+    mismatched_metabs = LVector(A_media=2.0, A=1.0, B=1.0, C=1.0)
+    @test_throws Exception make_ODEProblem(metab_pathway, mismatched_metabs, tspan, params)
 
     sol_manual = solve(prob_manual, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     sol = solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
