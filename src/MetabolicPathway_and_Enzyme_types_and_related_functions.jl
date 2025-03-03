@@ -1,8 +1,22 @@
 using LabelledArrays
 
-struct MetabolicPathway{ConstMetabs,Enzs} end
+struct MetabolicPathway{ConstantMetabolites,Enzymes} end
+function MetabolicPathway(ConstantMetabolites, Enzymes)
+    ConstantMetabolites isa Tuple{Vararg{Symbol}} || error("ConstantMetabolites must be a tuple of symbols like (:Glucose, :Lactate, :ATP,)")
+    Enzymes isa Tuple{Vararg{Tuple{Symbol,Tuple{Vararg{Symbol}},Tuple{Vararg{Symbol}}}}} ||
+        error(
+            "Second field Enzymes must be ((:Name, (:Substrate,), (:Product1,:Product2)), (:Name2, (:Substrate3,), (:Product4,)),...)",
+        )
+    return MetabolicPathway{ConstantMetabolites,Enzymes}()
+end
 
-struct Enzyme{Name,Subs,Prods} end
+struct Enzyme{Name,Substrates,Products} end
+function Enzyme(Name, Substrates, Products)
+    Name isa Symbol || error("Name must be a symbol like :Enz1")
+    Substrates isa Tuple{Vararg{Symbol}} || error("Substrates must be a tuple of symbols like (:A_media,)")
+    Products isa Tuple{Vararg{Symbol}} || error("Products must be a tuple of symbols like (:A,)")
+    return Enzyme{Name,Substrates,Products}()
+end
 
 rate(enzyme::Enzyme, x, y) = error("rate function not defined for enzyme: $enzyme")
 
@@ -24,7 +38,7 @@ product_names(
 
 #TODO: use labels for the enzyme and metabolite names with DimensionalData.jl
 #TODO: have an option to use ConstMetabs or not
-@inline @generated function stoichiometric_matrix(
+@generated function stoichiometric_matrix(
     ::MetabolicPathway{ConstMetabs,Enzs},
     metabs::LArray{T,1,Vector{T},MetaboliteNames},
 ) where {ConstMetabs,Enzs,T,MetaboliteNames}
