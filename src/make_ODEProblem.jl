@@ -77,6 +77,6 @@ function enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArr
     return map(enzyme -> CellMetabolismBase.rate(enzyme, metabs, params), enzymes)
 end
 
-_generate_Enzymes(
+@generated _generate_Enzymes(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = map(Enz -> Enzyme(Enz...), Enzs)
