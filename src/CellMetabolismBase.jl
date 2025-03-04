@@ -6,7 +6,7 @@ include("make_EnsembleProblem.jl")
 
 export make_ODEProblem
 export make_EnsembleProblem
-export rate
+export enzyme_rate
 export MetabolicPathway
 export constant_metabs
 export enzyme_names

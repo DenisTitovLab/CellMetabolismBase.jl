@@ -87,7 +87,7 @@ end
 
 function enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
     enzymes = _generate_Enzymes(metab_path)
-    return map(enzyme -> CellMetabolismBase.rate(enzyme, metabs, params), enzymes)
+    return map(enzyme -> CellMetabolismBase.enzyme_rate(enzyme, metabs, params), enzymes)
 end
 
 @generated _generate_Enzymes(

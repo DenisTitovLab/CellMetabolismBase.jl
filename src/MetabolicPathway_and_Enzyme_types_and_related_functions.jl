@@ -18,7 +18,7 @@ function Enzyme(Name, Substrates, Products)
     return Enzyme{Name,Substrates,Products}()
 end
 
-rate(enzyme::Enzyme, x, y) = error("rate function not defined for enzyme: $enzyme")
+enzyme_rate(enzyme::Enzyme, x, y) = error("rate function not defined for enzyme: $enzyme")
 
 constant_metabs(
     ::MetabolicPathway{ConstMetabs,Enzs},

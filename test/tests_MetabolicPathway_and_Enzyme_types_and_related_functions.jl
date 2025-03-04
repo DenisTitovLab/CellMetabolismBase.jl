@@ -66,5 +66,5 @@
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    @test_throws ErrorException rate(Enzyme{:Random,(:X,),(:Y,)}(), 1.0, 2.0)
+    @test_throws ErrorException enzyme_rate(Enzyme{:Random,(:X,),(:Y,)}(), 1.0, 2.0)
 end
