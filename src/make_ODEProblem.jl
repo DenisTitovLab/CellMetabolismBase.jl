@@ -18,6 +18,19 @@ An `ODEProblem` instance that encapsulates the differential equations governing 
 The returned ODEProblem uses `metabolicpathway_odes!` to compute the time evolution of metabolite concentrations
 by adjusting their rates based on enzyme kinetics defined in `enzyme_rates`. Ensure that `metabolic_pathway`,
 `init_cond`, and `params` have matching entries for substrates, products, and parameters for correct simulation.
+
+# Example
+```julia
+using CellMetabolismBase
+using DifferentialEquations
+
+metab_path = MetabolicPathway(...)
+init_cond = LArray(...)
+tspan = (0.0, 1e8)
+params = LArray(...)
+prob = make_ODEProblem(metab_path, init_cond, tspan, params)
+sol = solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8)
+```
 """
 function make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
     #test that the pathway was assembled correctly

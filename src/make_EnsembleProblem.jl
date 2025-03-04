@@ -1,11 +1,7 @@
 using SciMLBase: EnsembleProblem
 
-
 """
-    make_EnsembleProblem(metab_path::MetabolicPathway,
-                          vect_init_cond::Vector{<:LArray},
-                          vect_params::Vector{<:LArray};
-                          tspan::Tuple{Float64,Float64}=(0.0, 1e8))
+    make_EnsembleProblem(metab_path, vect_init_cond, vect_params; tspan=(0.0, 1e8))
 
 Create an `EnsembleProblem` for a metabolic pathway simulation with multiple initial conditions and parameters.
 
@@ -24,6 +20,17 @@ Create an `EnsembleProblem` for a metabolic pathway simulation with multiple ini
 - The ensemble problem is constructed from a base ODE problem created with the first elements of the initial conditions and parameters vectors.
 
 # Example
+```julia
+using CellMetabolismBase
+using DifferentialEquations
+
+metab_path = MetabolicPathway(...)
+init_cond = LArray(...)
+params = LArray(...)
+tspan = (0.0, 1e8)
+ensemble_prob = make_EnsembleProblem(metab_path, [init_cond1, init_cond2], [params1, params2], tspan)
+ensemble_sol = solve(ensemble_prob, RadauIIA9(), trajectories=2)
+```
 """
 function make_EnsembleProblem(
     metab_path::MetabolicPathway,
