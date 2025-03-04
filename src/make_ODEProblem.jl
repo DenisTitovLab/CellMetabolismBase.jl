@@ -1,4 +1,4 @@
-using SciMLBase
+using SciMLBase: ODEProblem
 
 """
     make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
