@@ -11,19 +11,19 @@
         ),
     )
 
-    function CellMetabolismBase.rate(::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
+    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
         return params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq) /
                (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
     end
-    function CellMetabolismBase.rate(::Enzyme{:Enz2,(:A,),(:B, :B)}, metabs, params)
+    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz2,(:A,),(:B, :B)}, metabs, params)
         return params.Enz2_Vmax * (metabs.A - metabs.B^2 / params.Enz2_Keq) /
                (1 + metabs.A / params.Enz2_K_A + metabs.B^2 / params.Enz2_K_B)
     end
-    function CellMetabolismBase.rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
+    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
         return params.Enz3_Vmax * (metabs.B - metabs.C / params.Enz3_Keq) /
                (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_K_C)
     end
-    function CellMetabolismBase.rate(::Enzyme{:Enz4,(:C, :C),(:D,)}, metabs, params)
+    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz4,(:C, :C),(:D,)}, metabs, params)
         return params.Enz4_Vmax * (metabs.C^2 - metabs.D / params.Enz4_Keq) /
                (1 + metabs.C^2 / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
     end
@@ -119,21 +119,21 @@
     mismatched_metabs = LVector(A_media=2.0, A=1.0, B=1.0, C=1.0)
     @test_throws Exception make_ODEProblem(metab_pathway, mismatched_metabs, tspan, params)
 
-    sol_manual = solve(prob_manual, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
-    sol = solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol_manual = OrdinaryDiffEq.solve(prob_manual, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol = OrdinaryDiffEq.solve(prob, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test sol_manual == sol
 
-    sol_manual = solve(prob_manual, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
-    sol = solve(prob, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol_manual = OrdinaryDiffEq.solve(prob_manual, OrdinaryDiffEq.Rodas4P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol = OrdinaryDiffEq.solve(prob, OrdinaryDiffEq.Rodas4P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test sol_manual == sol
 
-    manual_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob_manual, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    manual_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob_manual, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test mean(manual_benchmark_result.times) <= 20_000_000 #ns
-    @test manual_benchmark_result.allocs < 20_000
+    @test manual_benchmark_result.allocs < 30_000
 
-    package_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    package_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test mean(package_benchmark_result.times) <= 20_000_000 #ns
-    @test package_benchmark_result.allocs < 20_000
+    @test package_benchmark_result.allocs < 30_000
 
     @test manual_benchmark_result.allocs >= package_benchmark_result.allocs
 

@@ -2,9 +2,11 @@ module CellMetabolismBase
 
 include("MetabolicPathway_and_Enzyme_types_and_related_functions.jl")
 include("make_ODEProblem.jl")
+include("make_EnsembleProblem.jl")
 
 export make_ODEProblem
-export rate
+export make_EnsembleProblem
+export enzyme_rate
 export MetabolicPathway
 export constant_metabs
 export enzyme_names
