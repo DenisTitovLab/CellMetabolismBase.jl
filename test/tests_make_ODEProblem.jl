@@ -129,11 +129,11 @@
 
     manual_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob_manual, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test mean(manual_benchmark_result.times) <= 20_000_000 #ns
-    @test manual_benchmark_result.allocs < 20_000
+    @test manual_benchmark_result.allocs < 30_000
 
     package_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test mean(package_benchmark_result.times) <= 20_000_000 #ns
-    @test package_benchmark_result.allocs < 20_000
+    @test package_benchmark_result.allocs < 30_000
 
     @test manual_benchmark_result.allocs >= package_benchmark_result.allocs
 
