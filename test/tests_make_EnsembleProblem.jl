@@ -61,7 +61,7 @@
     @test ensemble_prob isa EnsembleProblem
 
     # Test solving the ensemble problem
-    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas4P2(), EnsembleSerial(); abstol=1e-15, reltol=1e-8, trajectories=2)
+    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas5P(), EnsembleSerial(); abstol=1e-15, reltol=1e-8, trajectories=2)
     @test length(sol) == 2
 
     # Check that the solutions are different (used different params/init conditions)
@@ -76,7 +76,7 @@
 
     @test ensemble_prob isa EnsembleProblem
 
-    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas4P2(), EnsembleSerial(); abstol=1e-15, reltol=1e-8, trajectories=2)
+    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas5P(), EnsembleSerial(); abstol=1e-15, reltol=1e-8, trajectories=2)
     @test length(sol) == 2
 
     # Solutions should differ due to different initial conditions
@@ -91,7 +91,7 @@
 
     @test ensemble_prob isa EnsembleProblem
 
-    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas4P2(), EnsembleSerial(); abstol=1e-15, reltol=1e-8, trajectories=2)
+    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas5P(), EnsembleSerial(); abstol=1e-15, reltol=1e-8, trajectories=2)
     @test length(sol) == 2
 
     # Solutions should differ due to different parameters
@@ -157,7 +157,7 @@
     @test ensemble_prob isa EnsembleProblem
 
     # Test solving the ensemble problem
-    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas4P2(), EnsembleSerial();
+    sol = OrdinaryDiffEq.solve(ensemble_prob, Rodas5P(), EnsembleSerial();
                 abstol=1e-12, reltol=1e-8, trajectories=n_bootstraps)
     @test length(sol) == n_bootstraps
 
