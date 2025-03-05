@@ -119,12 +119,12 @@
     mismatched_metabs = LVector(A_media=2.0, A=1.0, B=1.0, C=1.0)
     @test_throws Exception make_ODEProblem(metab_pathway, mismatched_metabs, tspan, params)
 
-    sol_manual = solve(prob_manual, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
-    sol = solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol_manual = OrdinaryDiffEq.solve(prob_manual, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol = OrdinaryDiffEq.solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test sol_manual == sol
 
-    sol_manual = solve(prob_manual, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
-    sol = solve(prob, Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol_manual = OrdinaryDiffEq.solve(prob_manual, OrdinaryDiffEq.Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
+    sol = OrdinaryDiffEq.solve(prob, OrdinaryDiffEq.Rodas5P(), abstol=1e-15, reltol=1e-8, save_everystep=false)
     @test sol_manual == sol
 
     manual_benchmark_result = @benchmark OrdinaryDiffEq.solve(prob_manual, RadauIIA9(), abstol=1e-15, reltol=1e-8, save_everystep=false)
