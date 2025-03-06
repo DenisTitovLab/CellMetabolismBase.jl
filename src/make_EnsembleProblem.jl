@@ -81,11 +81,11 @@ make_EnsembleProblem(
 #TODO make function that take distributions of params and init_cond and return an ensemble problem
 function make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    init_cond::LArray{<:Distribution,1, <:Vector{<:Distribution}, MetabNames},
-    params::LArray{<:Distribution,1, <:Vector{<:Distribution}, ParamNames};
+    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution},MetabNames},
+    params::LArray{<:Distribution,1,<:Vector{<:Distribution},ParamNames};
     n_bootstraps::Int=1000,
     kwargs...
-) where {MetabNames, ParamNames}
+) where {MetabNames,ParamNames}
     vect_init_cond = [rand.(init_cond) for _ in 1:n_bootstraps]
     vect_params = [rand.(params) for _ in 1:n_bootstraps]
     return make_EnsembleProblem(metab_path, vect_init_cond, vect_params; kwargs...)
