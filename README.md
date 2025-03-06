@@ -13,16 +13,16 @@ CellMetabolismBase.jl is a framework for simulating and analyzing cellular metab
 
 ## Features
 
-- Define `MetabolicPathway`s using enzyme rate equations
+- Define `MetabolicPathway` using enzyme rate equations
 - Automatically create DifferentialEquations.jl-compatible ODE models from `MetabolicPathway` definitions
 - Simulate `MetabolicPathway` activity using DifferentialEquations.jl at a wide range of parameter values and initial conditions
 - Estimate model prediction uncertainty for comparison with experimental data
-- Automated discovery of parameters that control a specific pathway behaviour using Global Sensitivity Analysis (GSA)
+- Automated discovery of parameters that control specific pathway behaviour using Global Sensitivity Analysis (GSA)
 
 ## Roadmap
 
 - Add functionality to validate that `MetabolicPathway` is defined correctly, such as testing enzyme rate equations, determining conserved moieties, and ensuring conservation of atoms.
-- Add functionality for Global Sensitivity Analysis (GSA) to identify parameters that control a specific pathway behaviour.
+- Add functionality for Global Sensitivity Analysis (GSA) to identify parameters that control specific pathway behaviour.
 
 ## Installation
 
@@ -108,6 +108,9 @@ end
 axislegend(ax)
 fig
 ```
+
+<img src="./assets/readme_metabolic_pathway_sim_results.png" width="600">
+
 ## Ensemble Simulations
 
 Ensemble simulations allow you to explore parameter or initial condition variations:
