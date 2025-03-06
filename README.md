@@ -13,11 +13,11 @@ CellMetabolismBase.jl is a framework for simulating and analyzing cellular metab
 
 ## Features
 
-- Define metabolic pathways with enzyme rate laws
-- Automatically create DifferentialEquations.jl-compatible ODE models from metabolic pathway definitions
-- Run simulations of metabolic pathway activity using DifferentialEquations.jl at a wide range of parameter values
-- Propagate parameter uncertainty into model prediction uncertainty for rigorous comparison with experimental data
-- Investigate the role of specific parameters in controlling pathway behaviour using Global Sensitivity Analysis (GSA)
+- Define Metabolic Pathways using enzyme rate equiations
+- Automatically create DifferentialEquations.jl-compatible ODE models from Metabolic Pathway definitions
+- Simulate Metabolic Pathway activity using DifferentialEquations.jl at a wide range of parameter values and initial conditions
+- Estimate model prediction uncertainty for comparison with experimental data
+- Automated discovery of parameters that control a specifc pathway behaviour using Global Sensitivity Analysis (GSA)
 
 ## Roadmap
 
