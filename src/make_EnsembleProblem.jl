@@ -78,15 +78,42 @@ make_EnsembleProblem(
     kwargs...
 )
 
-#TODO make function that take distributions of params and init_cond and return an ensemble problem
-function make_EnsembleProblem(
+make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution},MetabNames},
-    params::LArray{<:Distribution,1,<:Vector{<:Distribution},ParamNames};
+    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution}},
+    params::LArray{<:Distribution,1,<:Vector{<:Distribution}};
     n_bootstraps::Int=1000,
     kwargs...
-) where {MetabNames,ParamNames}
-    vect_init_cond = [rand.(init_cond) for _ in 1:n_bootstraps]
-    vect_params = [rand.(params) for _ in 1:n_bootstraps]
-    return make_EnsembleProblem(metab_path, vect_init_cond, vect_params; kwargs...)
-end
+) = make_EnsembleProblem(
+    metab_path,
+    [rand.(init_cond) for _ in 1:n_bootstraps],
+    [rand.(params) for _ in 1:n_bootstraps];
+    kwargs...
+)
+
+
+make_EnsembleProblem(
+    metab_path::MetabolicPathway,
+    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution}},
+    params::LArray{<:Real,1,<:Vector{<:Real}};
+    n_bootstraps::Int=1000,
+    kwargs...
+) = make_EnsembleProblem(
+    metab_path,
+    [rand.(init_cond) for _ in 1:n_bootstraps],
+    params;
+    kwargs...
+)
+
+make_EnsembleProblem(
+    metab_path::MetabolicPathway,
+    init_cond::LArray{<:Real,1,<:Vector{<:Real}},
+    params::LArray{<:Distribution,1,<:Vector{<:Distribution}};
+    n_bootstraps::Int=1000,
+    kwargs...
+) = make_EnsembleProblem(
+    metab_path,
+    init_cond,
+    [rand.(params) for _ in 1:n_bootstraps];
+    kwargs...
+)

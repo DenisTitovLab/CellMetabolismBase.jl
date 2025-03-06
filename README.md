@@ -1,7 +1,5 @@
 # CellMetabolismBase
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://DenisTitovLab.github.io/CellMetabolismBase.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://DenisTitovLab.github.io/CellMetabolismBase.jl/dev/)
 [![Build Status](https://github.com/DenisTitovLab/CellMetabolismBase.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/DenisTitovLab/CellMetabolismBase.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/DenisTitovLab/CellMetabolismBase.jl/graph/badge.svg?token=XC36BNU4IZ)](https://codecov.io/gh/DenisTitovLab/CellMetabolismBase.jl)
 [![JET](https://img.shields.io/badge/%F0%9F%9B%A9%EF%B8%8F_tested_with-JET.jl-233f9a)](https://github.com/aviatesk/JET.jl)
@@ -40,7 +38,8 @@ add CellMetabolismBase
 ## Basic Example
 
 ```julia
-using CellMetabolismBase, OrdinaryDiffEq, LabelledArrays, CairoMakie
+using CellMetabolismBase, OrdinaryDiffEq, LabelledArrays, CairoMakie, Distributions
+
 
 # We'll investigate a simple metabolic pathway with three enzymes:
 # Enz1: A_media → A
@@ -116,92 +115,115 @@ fig
 Ensemble simulations allow you to explore parameter or initial condition variations:
 
 ```julia
-using CellMetabolismBase
-using DifferentialEquations
-using LabelledArrays
+# We'll use the pathway defined in the Basic Example with the same packages
 
-# Define initial condition and parameters
-init_cond = LVector(A_media=2.0, A=0.5, B=0.5, C=0.5, D=0.0)
+# Create a range of A_media values to explore
+A_media_values = range(1.0, 10.0, 50)
 
-# Define multiple parameter sets for ensemble
-params1 = LVector(
-    Enz1_Vmax=1.0, Enz1_Keq=10.0, Enz1_K_A_media=1.0, Enz1_K_A=1.0,
-    Enz2_Vmax=1.0, Enz2_Keq=1.0, Enz2_K_A=2.0, Enz2_K_B=1.0,
-    Enz3_Vmax=1.0, Enz3_Keq=10.0, Enz3_K_B=1.0, Enz3_K_C=1.0,
-    Enz4_Vmax=1.0, Enz4_Keq=1.0, Enz4_K_C=1.0, Enz4_K_D=1.0
+# Use the same parameters for all simulations
+params = LVector(
+    Enz1_Vmax = 1.0, Enz1_Keq = 10.0, Enz1_K_A_media = 1.0, Enz1_K_A = 1.0,
+    Enz2_Vmax = 1.5, Enz2_Keq = 5.0, Enz2_K_A = 0.5, Enz2_K_B = 0.5,
+    Enz3_Vmax = 2.0, Enz3_Keq = 4.0, Enz3_K_B = 0.3,
 )
 
-params2 = LVector(
-    Enz1_Vmax=2.0, Enz1_Keq=8.0, Enz1_K_A_media=0.5, Enz1_K_A=0.5,
-    Enz2_Vmax=1.5, Enz2_Keq=2.0, Enz2_K_A=1.0, Enz2_K_B=2.0,
-    Enz3_Vmax=0.8, Enz3_Keq=12.0, Enz3_K_B=1.5, Enz3_K_C=0.8,
-    Enz4_Vmax=1.2, Enz4_Keq=0.5, Enz4_K_C=0.8, Enz4_K_D=1.2
-)
+# Generate different initial conditions for each A_media value
+init_conditions = [LVector(A_media = a_media, A = 0.0, B = 0.0, C = 0.0) for a_media in A_media_values]
 
-# Create ensemble problem with multiple parameter sets
-ensemble_prob = make_EnsembleProblem(pathway, init_cond, [params1, params2])
-ensemble_sol = solve(ensemble_prob, Tsit5(), trajectories=2)
+# Run to steady state
+tspan = (0.0, 1e8) # Long enough to reach steady state
+ensemble_prob = make_EnsembleProblem(pathway, init_conditions, params; tspan = tspan)
+ensemble_sol = solve(ensemble_prob, Rodas5P(), trajectories=length(A_media_values))
 
-# Plot results
-using Plots
-plot(ensemble_sol, idxs=(:D), lw=2, alpha=0.7, title="Product D formation", 
-     labels=["Set 1" "Set 2"], xlabel="Time", ylabel="[D]")
+# Extract steady-state values for each metabolite
+steady_states = []
+for sol in ensemble_sol
+    push!(steady_states, sol[end])  # Last timepoint contains steady state values
+end
+
+# Organize results by metabolite
+metabolites = propertynames(init_conditions[1])
+steady_state_values = Dict()
+for metab in metabolites
+    steady_state_values[metab] = [state[metab] for state in steady_states]
+end
+
+# Plot steady state values vs A_media
+fig = Figure(size=(800, 600))
+ax = Axis(fig[1, 1],
+          xlabel = "A_media concentration",
+          ylabel = "Steady-state concentration",
+          title = "Effect of A_media on steady-state metabolite levels")
+
+colors = Makie.wong_colors()
+for (i, metab) in enumerate(metabolites)
+    color = colors[mod1(i, length(colors))]
+    if metab != :A_media  # Skip plotting A_media against itself
+        lines!(ax, A_media_values, steady_state_values[metab],
+               label=string(metab), color=color, linewidth=2)
+    end
+end
+axislegend(ax)
+fig
 ```
+<img src="./assets/readme_metabolic_pathway_steady_state_at_A_range.png" width="600">
 
 ## Uncertainty quantification using Distributions of parameter values
 
 Easily explore parameter space by sampling from statistical distributions:
 
 ```julia
-using CellMetabolismBase
-using DifferentialEquations
-using LabelledArrays
-using Distributions
-
-# Define a pathway (simplified for clarity)
-pathway = MetabolicPathway(
-    (:A_media,),
-    (
-        (:Enz1, (:A_media,), (:A,)),
-        (:Enz2, (:A,), (:B,)),
-    ),
-)
-
-# Define enzyme rate laws
-function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
-    return params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq)
-end
-
-function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz2,(:A,),(:B,)}, metabs, params)
-    return params.Enz2_Vmax * metabs.A / (params.Enz2_K_A + metabs.A)
-end
+# We'll use the pathway defined in the Basic Example with the same packages
 
 # Define initial conditions
-init_cond = LVector(A_media=2.0, A=0.0, B=0.0)
+init_cond = LVector(A_media = 5.0, A = 0.0, B = 0.0, C = 0.0)
 
 # Define parameter distributions
 params_dist = LVector(
-    Enz1_Vmax = Uniform(0.8, 1.2),    # Uniform distribution
-    Enz1_Keq = Normal(10.0, 1.0),     # Normal distribution
-    Enz2_Vmax = LogNormal(0.0, 0.2),  # LogNormal distribution
-    Enz2_K_A = Uniform(0.5, 1.5)
+    Enz1_Vmax = Uniform(0.8, 1.2),
+    Enz1_Keq = Normal(10.0, 1.0),
+    Enz1_K_A_media = Uniform(0.8, 1.2),
+    Enz1_K_A = Uniform(0.8, 1.2),
+    Enz2_Vmax = LogNormal(0.0, 0.2),
+    Enz2_Keq = Normal(5.0, 0.5),
+    Enz2_K_A = Uniform(0.3, 0.7),
+    Enz2_K_B = Uniform(0.3, 0.7),
+    Enz3_Vmax = Uniform(1.8, 2.2),
+    Enz3_Keq = Normal(4.0, 0.4),
+    Enz3_K_B = Uniform(0.2, 0.4),
 )
 
 # Create ensemble problem with parameter sampling
-ensemble_prob = make_EnsembleProblem(pathway, init_cond, params_dist; n_bootstraps=100)
-ensemble_sol = solve(ensemble_prob, Tsit5(), trajectories=100)
+tspan = (0.0, 10000.0)
+ensemble_prob = make_EnsembleProblem(pathway, init_cond, params_dist; n_bootstraps = 100)
+ensemble_sol = solve(ensemble_prob, Rodas5P(), trajectories = 100)
 
-# Analyze results
-times = 0:0.1:10
-b_values = [ensemble_sol[i](times)[3,:] for i in 1:100]  # Get all B values at each time
-b_mean = mean(b_values)
-b_std = std(b_values)
+# Analyze results and plot
+times = range(0, 10000, 100)
+metabolites = propertynames(init_cond)
 
-# Plot results with confidence interval
-using Plots
-plot(times, b_mean, ribbon=b_std, fillalpha=0.3, 
-     title="Mean B production with uncertainty", 
-     label="Mean", legend=:bottomright, xlabel="Time", ylabel="[B]")
+# Extract data, calculate stats, and plot in a more concise way
+fig = Figure(size = (800, 600))
+ax = Axis(
+    fig[1, 1],
+    xlabel = "Time",
+    ylabel = "Concentration",
+    title = "Metabolite concentrations with uncertainty",
+)
+
+colors = Makie.wong_colors()
+for (i, metab) in enumerate(metabolites)
+    # Extract values, calculate mean and std in one compact section
+    values = hcat([Array(sol(times))[i, :] for sol in ensemble_sol]...)
+    mean_vals = vec(mean(values, dims = 2))
+    std_vals = vec(std(values, dims = 2))
+
+    # Plot mean line and uncertainty band
+    color = colors[mod1(i, length(colors))]
+    lines!(ax, times, mean_vals, label = string(metab), color = color)
+    band!(ax, times, mean_vals .- std_vals, mean_vals .+ std_vals, color = (color, 0.3))
+end
+axislegend(ax)
+fig
 ```
-
-See the [documentation](https://DenisTitovLab.github.io/CellMetabolismBase.jl/stable/) for more detailed examples and API reference.
+<img src="./assets/readme_metabolic_pathway_uncertainty.png" width="600">
