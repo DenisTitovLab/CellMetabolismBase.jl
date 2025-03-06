@@ -238,4 +238,78 @@
         @test 0.8 <= new_prob.p[1] <= 1.2   # Enz1_Vmax ~ Uniform(0.8, 1.2)
         @test 7.0 <= new_prob.p[2] <= 13.0  # Enz1_Keq ~ Normal(10.0, 1.0)
     end
+
+    # Test case: Initial conditions as distributions with fixed parameters
+    init_cond_dist = LVector(
+        A_media = Uniform(1.5, 2.5),
+        A = Normal(1.0, 0.1),
+        B = Normal(1.0, 0.1),
+        C = Normal(1.0, 0.1),
+        D = Normal(1.0, 0.1),
+    )
+
+    ensemble_prob = make_EnsembleProblem(
+        test_pathway,
+        init_cond_dist,
+        params1;
+        n_bootstraps = n_bootstraps,
+    )
+
+    @test ensemble_prob isa EnsembleProblem
+
+    # Test solving the ensemble problem
+    sol = OrdinaryDiffEq.solve(
+        ensemble_prob,
+        Rodas5P(),
+        EnsembleSerial();
+        abstol = 1e-12,
+        reltol = 1e-8,
+        trajectories = n_bootstraps,
+    )
+    @test length(sol) == n_bootstraps
+
+    # Check that the solutions vary due to different initial conditions
+    initial_vals = [s[1][2] for s in sol]  # Get initial values for metabolite A
+    @test length(unique(initial_vals)) > 1  # Should have different values
+
+    # Verify that all trajectories used the same parameters
+    prob_func = ensemble_prob.prob_func
+    base_prob = ensemble_prob.prob
+    for i = 1:5
+        new_prob = prob_func(base_prob, i, 1)
+        @test new_prob.p == params1  # Parameters should remain fixed
+    end
+
+    # Test case: Fixed initial conditions with parameters as distributions
+    ensemble_prob = make_EnsembleProblem(
+        test_pathway,
+        init_cond1,
+        params_dist;
+        n_bootstraps = n_bootstraps,
+    )
+
+    @test ensemble_prob isa EnsembleProblem
+
+    # Test solving the ensemble problem
+    sol = OrdinaryDiffEq.solve(
+        ensemble_prob,
+        Rodas5P(),
+        EnsembleSerial();
+        abstol = 1e-12,
+        reltol = 1e-8,
+        trajectories = n_bootstraps,
+    )
+    @test length(sol) == n_bootstraps
+
+    # Check that the solutions vary due to different parameters
+    final_vals = [s[end][5] for s in sol]  # Get final values for metabolite D
+    @test length(unique(final_vals)) > 1  # Should have different values
+
+    # Verify that all trajectories used the same initial conditions
+    prob_func = ensemble_prob.prob_func
+    base_prob = ensemble_prob.prob
+    for i = 1:5
+        new_prob = prob_func(base_prob, i, 1)
+        @test new_prob.u0 == init_cond1  # Initial conditions should remain fixed
+    end
 end
