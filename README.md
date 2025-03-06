@@ -19,20 +19,15 @@ CellMetabolismBase.jl is a framework for simulating and analyzing cellular metab
 
 ## Roadmap
 
-- Add functionality to validate that `MetabolicPathway` is defined correctly, such as testing enzyme rate equations, determining conserved moieties, and ensuring conservation of atoms.
-- Add functionality for Global Sensitivity Analysis (GSA) to identify parameters that control specific pathway behaviour.
+- Add functionality to validate that `MetabolicPathway` is defined correctly, such as testing enzyme rate equations, determining conserved moieties, and ensuring conservation of atoms
+- Add functionality for Global Sensitivity Analysis (GSA) to identify parameters that control specific pathway behaviour
+- Add functionality to simulate isotope tracing equations for a given `MetabolicPathway` definition
 
 ## Installation
 
 ```julia
 using Pkg
 Pkg.add("CellMetabolismBase")
-```
-
-Or in pkg mode (press `]` in REPL):
-
-```
-add CellMetabolismBase
 ```
 
 ## Basic Example
@@ -135,33 +130,21 @@ tspan = (0.0, 1e8) # Long enough to reach steady state
 ensemble_prob = make_EnsembleProblem(pathway, init_conditions, params; tspan = tspan)
 ensemble_sol = solve(ensemble_prob, Rodas5P(), trajectories=length(A_media_values))
 
-# Extract steady-state values for each metabolite
-steady_states = []
-for sol in ensemble_sol
-    push!(steady_states, sol[end])  # Last timepoint contains steady state values
-end
-
-# Organize results by metabolite
-metabolites = propertynames(init_conditions[1])
-steady_state_values = Dict()
-for metab in metabolites
-    steady_state_values[metab] = [state[metab] for state in steady_states]
-end
-
 # Plot steady state values vs A_media
 fig = Figure(size=(800, 600))
 ax = Axis(fig[1, 1],
           xlabel = "A_media concentration",
           ylabel = "Steady-state concentration",
           title = "Effect of A_media on steady-state metabolite levels")
-
+# Plot each metabolite with different colors - processing data directly in the loop
 colors = Makie.wong_colors()
-for (i, metab) in enumerate(metabolites)
-    color = colors[mod1(i, length(colors))]
-    if metab != :A_media  # Skip plotting A_media against itself
-        lines!(ax, A_media_values, steady_state_values[metab],
-               label=string(metab), color=color, linewidth=2)
-    end
+for (i, metab) in enumerate(propertynames(init_conditions[1]))
+    metab == :A_media && continue  # Skip plotting A_media against itself
+
+    # Extract this metabolite's steady state values directly here
+    metab_values = [sol[end][metab] for sol in ensemble_sol]
+    lines!(ax, A_media_values, metab_values,
+           label=string(metab), color=colors[mod1(i, length(colors))], linewidth=2)
 end
 axislegend(ax)
 fig
@@ -199,10 +182,6 @@ ensemble_prob = make_EnsembleProblem(pathway, init_cond, params_dist; n_bootstra
 ensemble_sol = solve(ensemble_prob, Rodas5P(), trajectories = 100)
 
 # Analyze results and plot
-times = range(0, 10000, 100)
-metabolites = propertynames(init_cond)
-
-# Extract data, calculate stats, and plot in a more concise way
 fig = Figure(size = (800, 600))
 ax = Axis(
     fig[1, 1],
@@ -210,9 +189,10 @@ ax = Axis(
     ylabel = "Concentration",
     title = "Metabolite concentrations with uncertainty",
 )
-
+# Define the time range for analysis
+times = range(0, 10000, 100)
 colors = Makie.wong_colors()
-for (i, metab) in enumerate(metabolites)
+for (i, metab) in enumerate(propertynames(init_cond))
     # Extract values, calculate mean and std in one compact section
     values = hcat([Array(sol(times))[i, :] for sol in ensemble_sol]...)
     mean_vals = vec(mean(values, dims = 2))
