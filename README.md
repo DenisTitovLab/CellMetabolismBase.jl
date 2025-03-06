@@ -140,7 +140,6 @@ ax = Axis(fig[1, 1],
 colors = Makie.wong_colors()
 for (i, metab) in enumerate(propertynames(init_conditions[1]))
     metab == :A_media && continue  # Skip plotting A_media against itself
-
     # Extract this metabolite's steady state values directly here
     metab_values = [sol[end][metab] for sol in ensemble_sol]
     lines!(ax, A_media_values, metab_values,
@@ -181,7 +180,7 @@ tspan = (0.0, 10000.0)
 ensemble_prob = make_EnsembleProblem(pathway, init_cond, params_dist; n_bootstraps = 100)
 ensemble_sol = solve(ensemble_prob, Rodas5P(), trajectories = 100)
 
-# Analyze results and plot
+# Plot each metabolite with uncertainty bands
 fig = Figure(size = (800, 600))
 ax = Axis(
     fig[1, 1],
@@ -189,19 +188,18 @@ ax = Axis(
     ylabel = "Concentration",
     title = "Metabolite concentrations with uncertainty",
 )
-# Define the time range for analysis
 times = range(0, 10000, 100)
 colors = Makie.wong_colors()
 for (i, metab) in enumerate(propertynames(init_cond))
-    # Extract values, calculate mean and std in one compact section
-    values = hcat([Array(sol(times))[i, :] for sol in ensemble_sol]...)
-    mean_vals = vec(mean(values, dims = 2))
-    std_vals = vec(std(values, dims = 2))
-
-    # Plot mean line and uncertainty band
+    # Get all values across ensemble at each time point in a single comprehension
+    metab_data = [[sol(t)[metab] for sol in ensemble_sol] for t in times]
+    # Calculate statistics in one line each
+    means = [mean(vals) for vals in metab_data]
+    stds = [std(vals) for vals in metab_data]
+    # Plot with a specific color
     color = colors[mod1(i, length(colors))]
-    lines!(ax, times, mean_vals, label = string(metab), color = color)
-    band!(ax, times, mean_vals .- std_vals, mean_vals .+ std_vals, color = (color, 0.3))
+    lines!(ax, times, means, label = string(metab), color = color)
+    band!(ax, times, means .- stds, means .+ stds, color = (color, 0.3))
 end
 axislegend(ax)
 fig
