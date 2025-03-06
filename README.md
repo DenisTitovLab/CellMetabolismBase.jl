@@ -9,16 +9,15 @@
 
 ## Overview
 
-CellMetabolismBase.jl provides a foundation for simulating and analyzing cellular metabolic pathways. It integrates with Julia's [Scientific Machine Learning (SciML)](https://sciml.ai) ecosystem to enable efficient modeling of complex metabolic networks, supporting both deterministic simulations and ensemble approaches for exploring parameter space.
+CellMetabolismBase.jl is a framework for simulating and analyzing cellular metabolic pathways. The goal of the package is to provide a convenient interface to automatically convert a list of enzymes into a form that can be used by ordinary differential equations (ODE) solvers of [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) and [Scientific Machine Learning (SciML)](https://sciml.ai) ecosystems in [Julia Programming Language](https://julialang.org). CellMetabolismBase.jl powers CellMetabolism.jl that enables simulation and analysis of human cell metabolism using a experimentally determined enzyme rate equations.
 
 ## Features
 
 - Define metabolic pathways with enzyme rate laws
-- Create ODE models automatically from pathway definitions
-- Run simulations with precise control over initial conditions and parameters
-- Generate ensembles of simulations to account for parameter uncertainty
-- Sample from statistical distributions for parameter exploration
-- Utilize the full power of DifferentialEquations.jl solvers and analysis tools
+- Automatically create DifferentialEquations.jl-compatible ODE models from metabolic pathway definitions
+- Run simulations of metabolic pathway activity using DifferentialEquations.jl at a wide range of parameter values
+- Propagate parameter uncertainty into model prediction uncertainty for rigorous comparison with experimental data
+- Investigate the role of specific parameters in controlling pathway behaviour using Global Sensitivity Analysis (GSA)
 
 ## Roadmap
 
@@ -29,13 +28,13 @@ CellMetabolismBase.jl provides a foundation for simulating and analyzing cellula
 
 ```julia
 using Pkg
-Pkg.add("https://github.com/DenisTitovLab/CellMetabolismBase.jl")
+Pkg.add("CellMetabolismBase")
 ```
 
 Or in pkg mode (press `]` in REPL):
 
 ```
-add https://github.com/DenisTitovLab/CellMetabolismBase.jl
+add CellMetabolismBase
 ```
 
 ## Basic Example
@@ -45,7 +44,12 @@ using CellMetabolismBase
 using DifferentialEquations
 using LabelledArrays
 
-# Define a simple enzyme-catalyzed pathway: S → P
+# We'll investigate a simple metabolic pathway with three enzymes:
+# Enz1: A_media → A → B → C
+# Enz2: A → 2B
+# Enz3: B → C
+
+# Define a simple enzyme-catalyzed pathway constisting of three enzymes: 
 # First argument is a tuple of constant metabolites (if any)
 # Second argument is a tuple of enzyme definitions
 # Each enzyme is defined as (enzyme_name, (substrates...), (products...))
