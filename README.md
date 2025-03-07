@@ -19,9 +19,10 @@ CellMetabolismBase.jl is a framework for simulating and analyzing cellular metab
 
 ## Roadmap
 
-- Add functionality to validate that `MetabolicPathway` is defined correctly, such as testing enzyme rate equations, determining conserved moieties, and ensuring conservation of atoms
-- Add functionality for Global Sensitivity Analysis (GSA) to identify parameters that control specific pathway behaviour
-- Add functionality to simulate isotope tracing equations for a given `MetabolicPathway` definition
+- Add function to validate that `MetabolicPathway` is defined correctly, such as testing enzyme rate equations, determining conserved moieties, and ensuring conservation of atoms
+- Add support for Global Sensitivity Analysis (GSA) to identify parameters that control specific pathway behaviour
+- Add ability to simulate isotope tracing equations for a given `MetabolicPathway` definition
+- Add support for units of parameters and initial conditions to ensure that the models are dimensionally consistent
 
 ## Installation
 
