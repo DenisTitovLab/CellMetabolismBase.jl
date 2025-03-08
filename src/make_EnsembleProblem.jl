@@ -2,7 +2,12 @@ using SciMLBase: EnsembleProblem
 using Distributions
 
 """
-    make_EnsembleProblem(metab_path, vect_init_cond, vect_params; tspan=(0.0, 1e8))
+    make_EnsembleProblem(
+    metab_path::MetabolicPathway,
+    vect_init_cond::Vector{LArray{T1,1,Vector{T1},MetabNames}},
+    vect_params::Vector{LArray{T2,1,Vector{T2},ParamNames}};
+    tspan::Tuple{T3,T3}=(0.0, 1e8)
+) where {T1<:Real,T2<:Real,T3<:Real,MetabNames,ParamNames}
 
 Create an `EnsembleProblem` for a metabolic pathway simulation with multiple initial conditions and parameters.
 
@@ -10,7 +15,7 @@ Create an `EnsembleProblem` for a metabolic pathway simulation with multiple ini
 - `metab_path::MetabolicPathway`: The metabolic pathway model to simulate.
 - `vect_init_cond::Vector{<:LArray}`: Vector of initial conditions for each ensemble member.
 - `vect_params::Vector{<:LArray}`: Vector of parameters for each ensemble member.
-- `tspan::Tuple{Float64,Float64}=(0.0, 1e8)`: Time span for the simulation.
+- `tspan=(0.0, 1e8)`: Time span for the simulation.
 
 # Returns
 - `EnsembleProblem`: An ensemble problem that can be solved using DifferentialEquations.jl's ensemble solvers.
@@ -35,10 +40,10 @@ ensemble_sol = solve(ensemble_prob, RadauIIA9(), trajectories=2)
 """
 function make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    vect_init_cond::Vector{<:LArray},
-    vect_params::Vector{<:LArray};
-    tspan::Tuple{Float64,Float64}=(0.0, 1e8)
-)
+    vect_init_cond::Vector{LArray{T1,1,Vector{T1},MetabNames}},
+    vect_params::Vector{LArray{T2,1,Vector{T2},ParamNames}};
+    tspan::Tuple{T3,T3}=(0.0, 1e8)
+) where {T1<:Real,T2<:Real,T3<:Real,MetabNames,ParamNames}
     #test that the pathway was assembled correctly
     #assert that metabs names overlap with metabolic_pathway substrates and products
     #assert that params overlap with metabolic_pathway params or maybe use the latter?
@@ -56,10 +61,10 @@ end
 
 make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    vect_init_cond::Vector{<:LArray},
-    params::LArray;
+    vect_init_cond::Vector{LArray{T1,1,Vector{T1},MetabNames}},
+    params::LArray{T2,1,Vector{T2},ParamNames};
     kwargs...
-) = make_EnsembleProblem(
+) where {T1<:Real,T2<:Real,MetabNames,ParamNames} = make_EnsembleProblem(
     metab_path,
     vect_init_cond,
     [params for _ in vect_init_cond];
@@ -68,10 +73,10 @@ make_EnsembleProblem(
 
 make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    init_cond::LArray,
-    vect_params::Vector{<:LArray};
+    init_cond::LArray{T1,1,Vector{T1},MetabNames},
+    vect_params::Vector{LArray{T2,1,Vector{T2},ParamNames}};
     kwargs...
-) = make_EnsembleProblem(
+) where {T1<:Real,T2<:Real,MetabNames,ParamNames} = make_EnsembleProblem(
     metab_path,
     [init_cond for _ in vect_params],
     vect_params;
@@ -80,11 +85,11 @@ make_EnsembleProblem(
 
 make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution}},
-    params::LArray{<:Distribution,1,<:Vector{<:Distribution}};
+    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution},MetabNames},
+    params::LArray{<:Distribution,1,<:Vector{<:Distribution},ParamNames};
     n_bootstraps::Int=1000,
     kwargs...
-) = make_EnsembleProblem(
+) where {MetabNames,ParamNames} = make_EnsembleProblem(
     metab_path,
     [rand.(init_cond) for _ in 1:n_bootstraps],
     [rand.(params) for _ in 1:n_bootstraps];
@@ -94,11 +99,11 @@ make_EnsembleProblem(
 
 make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution}},
-    params::LArray{<:Real,1,<:Vector{<:Real}};
+    init_cond::LArray{<:Distribution,1,<:Vector{<:Distribution},MetabNames},
+    params::LArray{T,1,Vector{T},ParamNames};
     n_bootstraps::Int=1000,
     kwargs...
-) = make_EnsembleProblem(
+) where {T<:Real,MetabNames,ParamNames} = make_EnsembleProblem(
     metab_path,
     [rand.(init_cond) for _ in 1:n_bootstraps],
     params;
@@ -107,11 +112,11 @@ make_EnsembleProblem(
 
 make_EnsembleProblem(
     metab_path::MetabolicPathway,
-    init_cond::LArray{<:Real,1,<:Vector{<:Real}},
-    params::LArray{<:Distribution,1,<:Vector{<:Distribution}};
+    init_cond::LArray{T1,1,Vector{T1},MetabNames},
+    params::LArray{<:Distribution,1,<:Vector{<:Distribution},ParamNames};
     n_bootstraps::Int=1000,
     kwargs...
-) = make_EnsembleProblem(
+) where {T1<:Real,MetabNames,ParamNames} = make_EnsembleProblem(
     metab_path,
     init_cond,
     [rand.(params) for _ in 1:n_bootstraps];

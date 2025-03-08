@@ -94,6 +94,8 @@
 
     dmetabs = @LArray rand(5) (:A_media, :A, :B, :C, :D)
     dmetabs_expected = @LArray rand(5) (:A_media, :A, :B, :C, :D)
+    dmetabs_wrong_names = @LArray rand(5) (:A_media, :A, :B, :C, :X)
+    @test_throws Exception CellMetabolismBase.metabolicpathway_odes!(test_pathway, dmetabs_wrong_names, metabs, params, 0.0)
     CellMetabolismBase.metabolicpathway_odes!(test_pathway, dmetabs, metabs, params, 0.0)
     test_odes!(dmetabs_expected, metabs, params, 0.0)
     @test dmetabs == dmetabs_expected
