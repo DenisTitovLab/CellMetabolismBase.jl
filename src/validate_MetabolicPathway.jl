@@ -17,7 +17,6 @@ function validate_metabolic_pathway(
     end
     # validate metabolic pathway metabolites are in MetabNames
     for metab in pathway_metab_names
-        println("Validating metabolite: $metab")
         if !(metab in MetabNames)
             error("Metabolite $metab not found in initial conditions LArray.")
         end
@@ -28,14 +27,15 @@ function validate_metabolic_pathway(
 end
 
 function validate_enzymes(
-    metabolic_pathway::MetabolicPathway{ConstMetabs,Enzs},
+    ::MetabolicPathway{ConstMetabs,Enzs},
     init_cond::LArray{T1,1,Vector{T1},MetabNames},
     params::LArray{T2,1,Vector{T2},ParamNames},
 ) where {ConstMetabs,Enzs,T1<:Real,T2<:Real,MetabNames,ParamNames}
     # Validate enzyme rate functions return correct type and check rates
     for Enz in Enzs
-        rand_test_metabs = @LArray rand(length(init_cond)) propertynames(init_cond)
-        enzyme_rate(Enzyme(Enz...), init_cond, params)
+        rand_test_metabs = @LArray eps() .+ rand(length(init_cond)) propertynames(init_cond)
+        rand_params = @LArray eps() .+ rand(length(params)) propertynames(params)
+        enzyme_rate(Enzyme(Enz...), init_cond, rand_params)
         substrate_names = Enz[2]
         product_names = Enz[3]
         # regulator_names = Enz[4]
@@ -44,16 +44,16 @@ function validate_enzymes(
         for product in product_names
             test_metabs = deepcopy(rand_test_metabs)
             test_metabs[product] = 0.0
-            enzyme_rate(Enzyme(Enz...), test_metabs, params) > 0.0 ||
-                error("Enzyme $(Enz[1]) rate should be positive when all substrates are present but products are missing.")
+            enzyme_rate(Enzyme(Enz...), test_metabs, rand_params) > 0.0 ||
+                error("Enzyme $(Enz[1]) rate should be positive when substrates are present and one product is missing.")
         end
 
         # enzyme_rate is negative if one of substrates is absent and products are present
         for substrate in substrate_names
             test_metabs = deepcopy(rand_test_metabs)
             test_metabs[substrate] = 0.0
-            enzyme_rate(Enzyme(Enz...), test_metabs, params) < 0.0 ||
-                error("Enzyme $(Enz[1]) rate should be negative when all substrates are present, indicating potential error or misconfiguration.")
+            enzyme_rate(Enzyme(Enz...), test_metabs, rand_params) < 0.0 ||
+                error("Enzyme $(Enz[1]) rate should be negative when products are present and one substrate is missing.")
         end
 
         # enzyme_rate is zero if all substrates and products are absent
@@ -61,19 +61,19 @@ function validate_enzymes(
         for metab in [substrate_names..., product_names...]
             empty_metabs[metab] = 0.0
         end
-        enzyme_rate(Enzyme(Enz...), empty_metabs, params) == 0.0 || error("Enzyme $(Enz[1]) rate should be zero when all substrates and products are absent.")
+        enzyme_rate(Enzyme(Enz...), empty_metabs, rand_params) == 0.0 || error("Enzyme $(Enz[1]) rate should be zero when all substrates and products are absent.")
 
         # enzyme_rate is zero when substrates and products are at equilibrium
         equilibrium_metabs = deepcopy(rand_test_metabs)
         if length(unique(product_names)) == length(product_names)
-            equilibrium_metabs[product_names[1]] = params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
-                                          reduce(*, [equilibrium_metabs[product] for product in product_names if product != product], init=1.0)
+            equilibrium_metabs[product_names[1]] = rand_params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
+                                          reduce(*, [equilibrium_metabs[product] for product in product_names[2:end]], init=1.0)
         else
-            equilibrium_metabs[product_names[1]] = sqrt(params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
+            equilibrium_metabs[product_names[1]] = sqrt(rand_params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
                                                reduce(*, [equilibrium_metabs[product] for product in product_names if product != product], init=1.0))
         end
-        isapprox(1.0-enzyme_rate(Enzyme(Enz...), equilibrium_metabs, params), 1.0) ||
-            error("Enzyme $(Enz[1]) rate should be zero when all substrates and products are at equilibrium.")
+        isapprox(1.0 - enzyme_rate(Enzyme(Enz...), equilibrium_metabs, rand_params), 1.0) ||
+            error("Enzyme $(Enz[1]) rate = $(enzyme_rate(Enzyme(Enz...), equilibrium_metabs, rand_params)) when substrates and products are at equilibrium but should be zero.")
     end
     return nothing
 end
