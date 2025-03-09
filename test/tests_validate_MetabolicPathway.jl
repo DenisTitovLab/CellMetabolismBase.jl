@@ -53,7 +53,7 @@
     )
 
 
-    CellMetabolismBase.validate_enzymes(test_pathway, metabs, params)
+    CellMetabolismBase.validate_enzyme_rates(test_pathway, metabs, params)
 
     CellMetabolismBase.validate_metabolic_pathway(
         test_pathway,

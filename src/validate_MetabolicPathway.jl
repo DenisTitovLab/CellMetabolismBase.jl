@@ -21,12 +21,15 @@ function validate_metabolic_pathway(
             error("Metabolite $metab not found in initial conditions LArray.")
         end
     end
-    validate_enzymes(metabolic_pathway, init_cond, params)
+    #TODO: validate that all the required kinetic and thermodynamic constants are in params with right names
+
+    #validate enzyme_rate equations
+    validate_enzyme_rates(metabolic_pathway, init_cond, params)
 
     return nothing
 end
 
-function validate_enzymes(
+function validate_enzyme_rates(
     ::MetabolicPathway{ConstMetabs,Enzs},
     init_cond::LArray{T1,1,Vector{T1},MetabNames},
     params::LArray{T2,1,Vector{T2},ParamNames},
