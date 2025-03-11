@@ -38,7 +38,9 @@ function validate_enzyme_rates(
     for Enz in Enzs
         rand_test_metabs = @LArray eps() .+ rand(length(init_cond)) propertynames(init_cond)
         rand_params = @LArray eps() .+ rand(length(params)) propertynames(params)
-        enzyme_rate(Enzyme(Enz...), init_cond, rand_params)
+        test_enzyme_rate = enzyme_rate(Enzyme(Enz...), init_cond, rand_params)
+        typeof(test_enzyme_rate) <: Real ||
+            error("Enzyme $(Enz[1]) rate function should return a Real number.")
         substrate_names = Enz[2]
         product_names = Enz[3]
         # regulator_names = Enz[4]
