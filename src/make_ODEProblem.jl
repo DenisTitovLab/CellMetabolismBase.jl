@@ -1,15 +1,20 @@
 using SciMLBase: ODEProblem
 
 """
-    make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
+    make_ODEProblem(
+    metabolic_pathway::MetabolicPathway,
+    init_cond::LArray{T1,1,Vector{T1},MetabNames},
+    tspan::Tuple{<:Real,<:Real},
+    params::LArray{T2,1,Vector{T2},ParamNames},
+) where {T1,T2,MetabNames,ParamNames}
 
 Construct an ODEProblem for simulating a metabolic pathway.
 
 # Arguments
 - `metabolic_pathway::MetabolicPathway`: A structure that defines the metabolic pathway, including the substrates, products, and related reaction details.
-- `init_cond::LArray`: The initial conditions for the metabolites.
-- `tspan::Tuple{<:Number, <:Number}`: A tuple specifying the start and end times for the simulation.
-- `params::LArray`: Parameters used in the metabolic reactions (e.g., kinetic constants).
+- `init_cond::LArray{T,1,Vector{T},MetabNames}`: The initial conditions for the metabolites.
+- `tspan::Tuple{<:Real, <:Real}`: A tuple specifying the start and end times for the simulation.
+- `params::LArray{T,1,Vector{T},ParamNames}`: Parameters used in the metabolic reactions (e.g., kinetic constants).
 
 # Returns
 An `ODEProblem` instance that encapsulates the differential equations governing the metabolic pathway. This problem can be solved using ODE solvers from SciMLBase.
@@ -32,7 +37,12 @@ prob = make_ODEProblem(metab_path, init_cond, tspan, params)
 sol = solve(prob, RadauIIA9(), abstol=1e-15, reltol=1e-8)
 ```
 """
-function make_ODEProblem(metabolic_pathway, init_cond, tspan, params)
+function make_ODEProblem(
+    metabolic_pathway::MetabolicPathway,
+    init_cond::LArray{T1,1,Vector{T1},MetabNames},
+    tspan::Tuple{<:Real,<:Real},
+    params::LArray{T2,1,Vector{T2},ParamNames},
+) where {T1<:Real,T2<:Real,MetabNames,ParamNames}
     #test that the pathway was assembled correctly
     #assert that metabs names overlap with metabolic_pathway substrates and products
     #assert that params overlap with metabolic_pathway params or maybe use the latter?
@@ -47,13 +57,11 @@ end
 
 function metabolicpathway_odes!(
     metab_path::MetabolicPathway,
-    dmetabs::LArray,
-    metabs::LArray,
-    params::LArray,
+    dmetabs::LArray{T1,1,Vector{T1},MetabNames},
+    metabs::LArray{T2,1,Vector{T2},MetabNames},
+    params::LArray{T3,1,Vector{T3},ParamNames},
     t,
-)
-    propertynames(metabs) == propertynames(dmetabs) ||
-        error("metabs and dmetabs must have the same propertynames")
+) where {T1<:Real,T2<:Real,T3<:Real,MetabNames,ParamNames}
     enz_rates = enzyme_rates(metab_path, metabs, params)
     calculate_dmetabs_from_enz_rates!(metab_path, dmetabs, enz_rates)
     return nothing
@@ -61,11 +69,11 @@ end
 
 @inline @generated function calculate_dmetabs_from_enz_rates!(
     ::MetabolicPathway{ConstMetabs,Enzs},
-    dmetabs::LArray{T,1,Vector{T},Syms},
+    dmetabs::LArray{T,1,Vector{T},MetabNames},
     rates::NTuple{N},
-) where {ConstMetabs,Enzs,T,Syms,N}
+) where {ConstMetabs,Enzs,T<:Real,MetabNames,N}
     temp = []
-    for metab in Syms
+    for metab in MetabNames
         dmetab = :(0.0)
         if metab ∉ ConstMetabs
             for enz in Enzs
@@ -85,7 +93,11 @@ end
     return expr
 end
 
-function enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
+function enzyme_rates(
+    metab_path::MetabolicPathway,
+    metabs::LArray{T1,1,Vector{T1},MetabNames},
+    params::LArray{T2,1,Vector{T2},ParamNames},
+) where {T1<:Real,T2<:Real,MetabNames,ParamNames}
     enzymes = _generate_Enzymes(metab_path)
     return map(enzyme -> CellMetabolismBase.enzyme_rate(enzyme, metabs, params), enzymes)
 end
