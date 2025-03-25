@@ -57,7 +57,7 @@
 
     # ------- Test: Full validation with standard pathway -------
     # Test that the overall validation function works
-    @test_nowarn CellMetabolismBase.validate_metabolic_pathway(
+    @test_nowarn CellMetabolismBase.validate_MetabolicPathway(
         test_pathway,
         valid_metabs,
         valid_params,
@@ -72,7 +72,7 @@
     # ------- Test: Check metabolites found in initial conditions -------
     # Test 1: Missing metabolite - should fail
     missing_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0) # Missing C and D
-    @test_throws ErrorException CellMetabolismBase.validate_metabolic_pathway(
+    @test_throws ErrorException CellMetabolismBase.validate_MetabolicPathway(
         test_pathway,
         missing_metabs,
         valid_params,
@@ -80,7 +80,7 @@
 
     # Test 2: Extra metabolite - should pass
     extra_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0, D = 1.0, E = 0.5) # Extra E
-    @test_nowarn CellMetabolismBase.validate_metabolic_pathway(
+    @test_nowarn CellMetabolismBase.validate_MetabolicPathway(
         test_pathway,
         extra_metabs,
         valid_params,

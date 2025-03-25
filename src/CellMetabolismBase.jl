@@ -9,11 +9,15 @@ export make_ODEProblem
 export make_EnsembleProblem
 export enzyme_rate
 export MetabolicPathway
+export Enzyme
 export constant_metabs
 export enzyme_names
 export substrate_names
 export product_names
+export activator_names
+export inhibitor_names
 export stoichiometric_matrix
-export Enzyme
+export validate_MetabolicPathway
+
 
 end

@@ -1,6 +1,6 @@
 using LabelledArrays
 
-function validate_metabolic_pathway(
+function validate_MetabolicPathway(
     metabolic_pathway::MetabolicPathway,
     init_cond::LArray{T1,1,Vector{T1},MetabNames},
     params::LArray{T2,1,Vector{T2},ParamNames},
