@@ -1,24 +1,41 @@
 using LabelledArrays
 
 struct MetabolicPathway{ConstantMetabolites,Enzymes} end
+
+#TODO: transition to using DSL and move all the synthax checking to the DSL
 function MetabolicPathway(ConstantMetabolites, Enzymes)
     ConstantMetabolites isa Tuple{Vararg{Symbol}} || error("ConstantMetabolites must be a tuple of symbols like (:Glucose, :Lactate, :ATP,)")
-    Enzymes isa Tuple{Vararg{Tuple{Symbol,Tuple{Vararg{Symbol}},Tuple{Vararg{Symbol}}}}} ||
-        error(
-            "Second field Enzymes must be ((:Name, (:Substrate,), (:Product1,:Product2)), (:Name2, (:Substrate3,), (:Product4,)),...)",
-        )
+    for e in Enzymes
+        (e isa Tuple{
+            Symbol,
+            Tuple{Symbol,Vararg{Symbol}},
+            Tuple{Symbol,Vararg{Symbol}},
+            Tuple{Vararg{Symbol}},
+            Tuple{Vararg{Symbol}}
+        } ||
+         e isa Tuple{
+            Symbol,
+            Tuple{Symbol,Vararg{Symbol}},
+            Tuple{Symbol,Vararg{Symbol}}
+        }) ||
+            error("Enzymes must be a tuple of tuples like ((:Name, (:S1,), (:P1,:P2),(:A1,),(:I,)), (:Name2, (:Substrate3,), (:Product4,)),...)")
+    end
     return MetabolicPathway{ConstantMetabolites,Enzymes}()
 end
 
-struct Enzyme{Name,Substrates,Products} end
-function Enzyme(Name, Substrates, Products)
-    Name isa Symbol || error("Name must be a symbol like :Enz1")
-    Substrates isa Tuple{Vararg{Symbol}} || error("Substrates must be a tuple of symbols like (:A_media,)")
-    Products isa Tuple{Vararg{Symbol}} || error("Products must be a tuple of symbols like (:A,)")
-    return Enzyme{Name,Substrates,Products}()
-end
+struct Enzyme{Name,Substrates,Products,Activators,Inhibitors} end
 
-enzyme_rate(enzyme::Enzyme, x, y) = error("rate function not defined for enzyme: $enzyme")
+#TODO: transition to using DSL and move all the synthax checking to the DSL
+function Enzyme(Name, Substrates, Products, Activators, Inhibitors)
+    Name isa Symbol || error("Name must be a symbol like :Enz1")
+    Substrates isa Tuple{Symbol,Vararg{Symbol}} || error("Substrates must be a tuple of symbols like (:S1,) and enzymes must have at least one substrate")
+    Products isa Tuple{Symbol,Vararg{Symbol}} || error("Products must be a tuple of symbols like (:P1,) and enzymes must have at least one product")
+    Activators isa Tuple{Vararg{Symbol}} || error("Activators must be a tuple of symbols like (:A1,) or empty tuple ()")
+    Inhibitors isa Tuple{Vararg{Symbol}} || error("Inhibitors must be a tuple of symbols like (:I1,) or empty tuple ()")
+    return Enzyme{Name,Substrates,Products,Activators,Inhibitors}()
+end
+Enzyme(Name, Substrates, Products) = Enzyme(Name, Substrates, Products, (), ())
+enzyme_rate(enzyme::Enzyme, metabs, params) = error("rate function not defined for enzyme: $enzyme")
 
 constant_metabs(
     ::MetabolicPathway{ConstMetabs,Enzs},
@@ -35,6 +52,14 @@ substrate_names(
 product_names(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 3), Enzs)
+
+activator_names(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 4), Enzs)
+
+inhibitor_names(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 5), Enzs)
 
 #TODO: use labels for the enzyme and metabolite names with DimensionalData.jl
 #TODO: have an option to use ConstMetabs or not

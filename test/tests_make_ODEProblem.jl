@@ -127,10 +127,10 @@
     @test manual_benchmark_result.allocs == 0
     @test enzymes isa Tuple{Vararg{Enzyme}}
     @test length(enzymes) == 4
-    @test enzymes[1] == Enzyme{:Enz1,(:A_media,),(:A,)}()
-    @test enzymes[2] == Enzyme{:Enz2,(:A,),(:B, :B)}()
-    @test enzymes[3] == Enzyme{:Enz3,(:B,),(:C,)}()
-    @test enzymes[4] == Enzyme{:Enz4,(:C, :C),(:D,)}()
+    @test enzymes[1] == Enzyme(:Enz1,(:A_media,),(:A,))
+    @test enzymes[2] == Enzyme(:Enz2,(:A,),(:B, :B))
+    @test enzymes[3] == Enzyme(:Enz3,(:B,),(:C,))
+    @test enzymes[4] == Enzyme(:Enz4,(:C, :C),(:D,))
     mismatched_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0)
     @test_throws Exception make_ODEProblem(metab_pathway, mismatched_metabs, tspan, params)
 
