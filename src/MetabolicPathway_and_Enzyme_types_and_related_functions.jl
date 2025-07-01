@@ -61,7 +61,28 @@ inhibitor_names(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 5), Enzs)
 
-@generated function metabolite_names(
+@generated function reactants_names(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+) where {ConstMetabs,Enzs}
+    unique_reactant_names = ()
+    for (e, enz) in enumerate(Enzs)
+        enz_substrates = enz[2]
+        enz_products = enz[3]
+        for metab_name in enz_substrates
+            if !(metab_name in unique_reactant_names)
+                unique_reactant_names = (unique_reactant_names..., metab_name)
+            end
+        end
+        for metab_name in enz_products
+            if !(metab_name in unique_reactant_names)
+                unique_reactant_names = (unique_reactant_names..., metab_name)
+            end
+        end
+    end
+    return unique_reactant_names
+end
+
+@generated function all_metabolite_names(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs}
     unique_metab_names = ()
@@ -86,12 +107,12 @@ end
 """
     stoichiometric_matrix(pathway::MetabolicPathway)
 Returns the stoichiometric matrix of the metabolic pathway.
-Rows correspond to metabolites and columns to enzymes ordered as in `metabolite_names(pathway)` and `enzyme_names(pathway)`.
+Rows correspond to metabolites and columns to enzymes ordered as in `reactant_names(pathway)` and `enzyme_names(pathway)`.
 """
 @generated function stoichiometric_matrix(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs}
-    metab_names = metabolite_names(MetabolicPathway{ConstMetabs,Enzs}())
+    metab_names = reactants_names(MetabolicPathway{ConstMetabs,Enzs}())
     s_matrix = zeros(Int, length(metab_names), length(Enzs))
     for (m, metab_name) in enumerate(metab_names)
         if metab_name ∉ ConstMetabs

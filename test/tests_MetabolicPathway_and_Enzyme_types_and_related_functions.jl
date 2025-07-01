@@ -48,7 +48,7 @@
         ((:Activator1,), (), (:Activator2, :Activator3), (:Activator4,))
     expected_inhibitor_names =
         ((:Inhibitor1,), (:Inhibitor2, :Inhibitor3), (), (:Inhibitor4,))
-    expected_metabolite_names = (
+    expected_all_metabolite_names = (
         :A_media,
         :A,
         :B,
@@ -71,30 +71,35 @@
         0 0 0 1
     ]
 
+    # Test metabolite_names function
     @test constant_metabs(test_pathway) == expected_const_metabs
     constant_metabs(test_pathway) isa Tuple{Vararg{Symbol}}
     benchmark_result = @benchmark constant_metabs($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
+    # Test enzyme_names function
     @test enzyme_names(test_pathway) == expected_enzyme_names
     enzyme_names(test_pathway) isa Tuple{Vararg{Symbol}}
     benchmark_result = @benchmark enzyme_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
+    # Test substrate_names function
     @test substrate_names(test_pathway) == expected_substrate_names
     substrate_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
     benchmark_result = @benchmark substrate_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
+    # Test product_names function
     @test product_names(test_pathway) == expected_product_names
     product_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
     benchmark_result = @benchmark product_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
+    # Test stoichiometric_matrix function
     @test stoichiometric_matrix(test_pathway) == expected_stoichiometric_matrix
     stoichiometric_matrix(test_pathway) isa Matrix{Int}
     benchmark_result = @benchmark stoichiometric_matrix($test_pathway)
@@ -115,10 +120,17 @@
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    # Test metabolite_names function
-    @test metabolite_names(test_pathway) == expected_metabolite_names
-    metabolite_names(test_pathway) isa Tuple{Vararg{Symbol}}
-    benchmark_result = @benchmark metabolite_names($test_pathway)
+    # Test reactants_names function
+    @test reactants_names(test_pathway) == (:A_media, :A, :B, :C, :D)
+    reactants_names(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark reactants_names($test_pathway)
+    @test mean(benchmark_result.times) <= 10 #ns
+    @test benchmark_result.allocs == 0
+
+    # Test all_metabolite_names function
+    @test all_metabolite_names(test_pathway) == expected_all_metabolite_names
+    all_metabolite_names(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark all_metabolite_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
