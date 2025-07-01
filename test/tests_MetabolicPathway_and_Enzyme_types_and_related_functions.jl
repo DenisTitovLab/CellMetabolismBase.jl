@@ -3,13 +3,14 @@
 
     # Test basic Enzyme constructor and its errors
     @test Enzyme(:Enz1, (:A,), (:B,)) isa Enzyme
-    @test Enzyme(:Enz1,(:A,),(:B,)) isa Enzyme
+    @test Enzyme(:Enz1, (:A,), (:B,)) isa Enzyme
     @test Enzyme(:Enz1, (:A,), (:B,)) === Enzyme{:Enz1,(:A,),(:B,),(),()}()
     @test Enzyme(:Enz1, (:A,), (:B,), (:Act1,), (:Inh1,)) isa Enzyme
     @test Enzyme(:Enz1, (:A,), (:B,), (:Act1, :Act2), (:Inh1, :Inh2)) isa Enzyme
     @test Enzyme(:Enz1, (:A,), (:B,), (), (:Inh1,)) isa Enzyme
     @test Enzyme(:Enz1, (:A,), (:B,), (:Act1,), ()) isa Enzyme
-    @test Enzyme(:Enz1, (:A,), (:B,), (:Act1,), (:Inh1,)) === Enzyme{:Enz1,(:A,),(:B,),(:Act1,),(:Inh1,)}()
+    @test Enzyme(:Enz1, (:A,), (:B,), (:Act1,), (:Inh1,)) ===
+          Enzyme{:Enz1,(:A,),(:B,),(:Act1,),(:Inh1,)}()
     @test Enzyme(:Enz1, (:A,), (:B,), (), ()) === Enzyme(:Enz1, (:A,), (:B,))
     @test_throws ErrorException Enzyme(:Enz1, (:A,), (:B,), [:Act1], (:Inh1,))
     @test_throws ErrorException Enzyme(:Enz1, (:A,), (:B,), (:Act1,), [:Inh1])
@@ -43,8 +44,25 @@
     expected_enzyme_names = (:Enz1, :Enz2, :Enz3, :Enz4)
     expected_substrate_names = ((:A_media,), (:A,), (:B,), (:C, :C))
     expected_product_names = ((:A,), (:B, :B), (:C,), (:D,))
-    expected_activator_names = ((:Activator1,), (), (:Activator2, :Activator3), (:Activator4,))
-    expected_inhibitor_names = ((:Inhibitor1,), (:Inhibitor2, :Inhibitor3), (), (:Inhibitor4,))
+    expected_activator_names =
+        ((:Activator1,), (), (:Activator2, :Activator3), (:Activator4,))
+    expected_inhibitor_names =
+        ((:Inhibitor1,), (:Inhibitor2, :Inhibitor3), (), (:Inhibitor4,))
+    expected_metabolite_names = (
+        :A_media,
+        :A,
+        :B,
+        :C,
+        :D,
+        :Activator1,
+        :Activator2,
+        :Activator3,
+        :Activator4,
+        :Inhibitor1,
+        :Inhibitor2,
+        :Inhibitor3,
+        :Inhibitor4,
+    )
     expected_stoichiometric_matrix = [
         0 0 0 0
         1 -1 0 0
@@ -77,10 +95,9 @@
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    @test stoichiometric_matrix(test_pathway, test_pathway_metabs) ==
-          expected_stoichiometric_matrix
-    stoichiometric_matrix(test_pathway, test_pathway_metabs) isa Matrix{Int}
-    benchmark_result = @benchmark stoichiometric_matrix($test_pathway, $test_pathway_metabs)
+    @test stoichiometric_matrix(test_pathway) == expected_stoichiometric_matrix
+    stoichiometric_matrix(test_pathway) isa Matrix{Int}
+    benchmark_result = @benchmark stoichiometric_matrix($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
@@ -98,5 +115,12 @@
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    @test_throws ErrorException enzyme_rate(Enzyme(:Random,(:X,),(:Y,)), 1.0, 2.0)
+    # Test metabolite_names function
+    @test metabolite_names(test_pathway) == expected_metabolite_names
+    metabolite_names(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark metabolite_names($test_pathway)
+    @test mean(benchmark_result.times) <= 10 #ns
+    @test benchmark_result.allocs == 0
+
+    @test_throws ErrorException enzyme_rate(Enzyme(:Random, (:X,), (:Y,)), 1.0, 2.0)
 end

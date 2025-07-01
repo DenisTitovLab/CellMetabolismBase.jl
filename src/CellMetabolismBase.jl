@@ -16,6 +16,7 @@ export substrate_names
 export product_names
 export activator_names
 export inhibitor_names
+export metabolite_names
 export stoichiometric_matrix
 export validate_MetabolicPathway
 
