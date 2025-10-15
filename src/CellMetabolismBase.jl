@@ -8,6 +8,7 @@ include("make_EnsembleProblem.jl")
 export make_ODEProblem
 export make_EnsembleProblem
 export enzyme_rate
+export disequilibrium_ratios
 export MetabolicPathway
 export Enzyme
 export constant_metabs
