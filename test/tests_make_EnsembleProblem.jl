@@ -12,31 +12,6 @@
         ),
     )
 
-    # Define rate functions for enzymes
-    function CellMetabolismBase.enzyme_rate(
-        ::Enzyme{:Enz1,(:A_media,),(:A,)},
-        metabs,
-        params,
-    )
-        return params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq) /
-               (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
-    end
-
-    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz2,(:A,),(:B, :B)}, metabs, params)
-        return params.Enz2_Vmax * (metabs.A - metabs.B^2 / params.Enz2_Keq) /
-               (1 + metabs.A / params.Enz2_K_A + metabs.B^2 / params.Enz2_K_B)
-    end
-
-    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
-        return params.Enz3_Vmax * (metabs.B - metabs.C / params.Enz3_Keq) /
-               (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_K_C)
-    end
-
-    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz4,(:C, :C),(:D,)}, metabs, params)
-        return params.Enz4_Vmax * (metabs.C^2 - metabs.D / params.Enz4_Keq) /
-               (1 + metabs.C^2 / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
-    end
-
     # Create test initial conditions and parameters
     init_cond1 = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0, D = 1.0)
     init_cond2 = LVector(A_media = 3.0, A = 0.5, B = 0.5, C = 0.5, D = 0.5)
@@ -97,7 +72,7 @@
     @test length(sol) == 2
 
     # Check that the solutions are different (used different params/init conditions)
-    @test sol[1].u[end] != sol[2].u[end]
+    @test sol.u[1].u[end] != sol.u[2].u[end]
 
     # Test case: Single parameter set with multiple initial conditions
     ensemble_prob = make_EnsembleProblem(test_pathway, [init_cond1, init_cond2], params1)
@@ -115,7 +90,7 @@
     @test length(sol) == 2
 
     # Solutions should differ due to different initial conditions
-    @test sol[1].u[1] != sol[2].u[1]
+    @test sol.u[1].u[1] != sol.u[2].u[1]
 
     # Test case: Single initial condition with multiple parameter sets
     ensemble_prob = make_EnsembleProblem(test_pathway, init_cond1, [params1, params2])
@@ -133,7 +108,7 @@
     @test length(sol) == 2
 
     # Solutions should differ due to different parameters
-    @test sol[1].u[end] != sol[2].u[end]
+    @test sol.u[1].u[end] != sol.u[2].u[end]
 
     # Test case: Custom time span
     tspan = (0.0, 100.0)
@@ -206,7 +181,7 @@
     @test length(sol) == n_bootstraps
 
     # Check that the solutions vary (due to different random samples)
-    final_vals = [s[end][4] for s in sol]  # Get final values for metabolite C
+    final_vals = [s[end][4] for s in sol.u]  # Get final values for metabolite C
     @test length(unique(final_vals)) > 1   # Should have different values
 
     # Test with custom time span
@@ -269,7 +244,7 @@
     @test length(sol) == n_bootstraps
 
     # Check that the solutions vary due to different initial conditions
-    initial_vals = [s[1][2] for s in sol]  # Get initial values for metabolite A
+    initial_vals = [s[1][2] for s in sol.u]  # Get initial values for metabolite A
     @test length(unique(initial_vals)) > 1  # Should have different values
 
     # Verify that all trajectories used the same parameters
@@ -302,7 +277,7 @@
     @test length(sol) == n_bootstraps
 
     # Check that the solutions vary due to different parameters
-    final_vals = [s[end][5] for s in sol]  # Get final values for metabolite D
+    final_vals = [s[end][5] for s in sol.u]  # Get final values for metabolite D
     @test length(unique(final_vals)) > 1  # Should have different values
 
     # Verify that all trajectories used the same initial conditions
