@@ -134,7 +134,7 @@ function disequilibrium_ratios(
     return map(enzyme -> disequilibrium_ratio(enzyme, metabs, params), enzymes)
 end
 
-@generated function reactants_names(
+@generated function reactant_names(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs}
     unique_reactant_names = ()
@@ -185,7 +185,7 @@ Rows correspond to metabolites and columns to enzymes ordered as in `reactant_na
 @generated function stoichiometric_matrix(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs}
-    metab_names = reactants_names(MetabolicPathway{ConstMetabs,Enzs}())
+    metab_names = reactant_names(MetabolicPathway{ConstMetabs,Enzs}())
     s_matrix = zeros(Int, length(metab_names), length(Enzs))
     for (m, metab_name) in enumerate(metab_names)
         if metab_name ∉ ConstMetabs

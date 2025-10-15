@@ -155,10 +155,10 @@
     )
     @test_throws ArgumentError disequilibrium_ratio(enzymes[3], test_pathway_metabs, params_missing)
 
-    # Test reactants_names function
-    @test reactants_names(test_pathway) == (:A_media, :A, :B, :C, :D)
-    reactants_names(test_pathway) isa Tuple{Vararg{Symbol}}
-    benchmark_result = @benchmark reactants_names($test_pathway)
+    # Test reactant_names function
+    @test reactant_names(test_pathway) == (:A_media, :A, :B, :C, :D)
+    reactant_names(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark reactant_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
