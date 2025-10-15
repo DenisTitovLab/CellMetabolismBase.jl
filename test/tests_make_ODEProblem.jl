@@ -1,3 +1,43 @@
+@testitem "disequilibrium_ratios" begin
+    using LabelledArrays
+
+    test_pathway = MetabolicPathway(
+        (:A_media,),
+        (
+            (:Enz1, (:A_media,), (:A,)),
+            (:Enz2, (:A,), (:B, :B)),
+            (:Enz3, (:B,), (:C,)),
+            (:Enz4, (:C, :C), (:D,)),
+        ),
+    )
+
+    metabs = LVector(A_media = 2.0, A = 1.0, B = 3.0, C = 4.0, D = 5.0)
+    params = LVector(
+        Enz1_Keq = 10.0,
+        Enz2_Keq = 5.0,
+        Enz3_Keq = 2.0,
+        Enz4_Keq = 1.5,
+    )
+
+    ratios = CellMetabolismBase.disequilibrium_ratios(test_pathway, metabs, params)
+    @test length(ratios) == 4
+    @test ratios[1] ≈ (metabs.A / metabs.A_media) / params.Enz1_Keq
+    @test ratios[2] ≈ (metabs.B^2 / metabs.A) / params.Enz2_Keq
+    @test ratios[3] ≈ (metabs.C / metabs.B) / params.Enz3_Keq
+    @test ratios[4] ≈ (metabs.D / metabs.C^2) / params.Enz4_Keq
+
+    params_missing = LVector(
+        Enz1_Keq = 10.0,
+        Enz2_Keq = 5.0,
+        Enz4_Keq = 1.5,
+    )
+    @test_throws ArgumentError CellMetabolismBase.disequilibrium_ratios(
+        test_pathway,
+        metabs,
+        params_missing,
+    )
+end
+
 @testitem "make_ODEProblem" begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
 

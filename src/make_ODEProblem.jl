@@ -102,6 +102,50 @@ function enzyme_rates(
     return map(enzyme -> CellMetabolismBase.enzyme_rate(enzyme, metabs, params), enzymes)
 end
 
+"""
+    disequilibrium_ratios(metab_path::MetabolicPathway,
+        metabs::LArray{T1,1,Vector{T1},MetabNames},
+        params::LArray{T2,1,Vector{T2},ParamNames})
+
+Return the disequilibrium (reaction quotient over equilibrium constant) for each enzyme
+in `metab_path`, ordered according to `enzyme_names(metab_path)`.
+"""
+@generated function disequilibrium_ratios(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+    metabs::LArray{T1,1,Vector{T1},MetabNames},
+    params::LArray{T2,1,Vector{T2},ParamNames},
+) where {ConstMetabs,Enzs,T1<:Real,T2<:Real,MetabNames,ParamNames}
+    ratio_exprs = Expr[]
+    for (idx, Enz) in enumerate(Enzs)
+        enz_name = Enz[1]
+        substrates = Enz[2]
+        products = Enz[3]
+        keq_sym = Symbol(enz_name, "_Keq")
+        error_msg = "Parameter $(keq_sym) (equilibrium constant) not found for enzyme $(enz_name)."
+
+        numerator_expr = :(one(eltype(metabs)))
+        for product in products
+            numerator_expr = :( $numerator_expr * metabs.$product )
+        end
+
+        denominator_expr = :(one(eltype(metabs)))
+        for substrate in substrates
+            denominator_expr = :( $denominator_expr * metabs.$substrate )
+        end
+
+        rq_sym = gensym(:rq)
+        block_expr = Expr(
+            :block,
+            :(hasproperty(params, $(QuoteNode(keq_sym))) ||
+                throw(ArgumentError($(QuoteNode(error_msg))))),
+            Expr(:(=), rq_sym, :( $numerator_expr / $denominator_expr )),
+            :( $rq_sym / getproperty(params, $(QuoteNode(keq_sym))) ),
+        )
+        push!(ratio_exprs, block_expr)
+    end
+    return Expr(:tuple, ratio_exprs...)
+end
+
 @generated _generate_Enzymes(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = map(Enz -> Enzyme(Enz...), Enzs)
