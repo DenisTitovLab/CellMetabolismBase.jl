@@ -37,29 +37,102 @@ end
 Enzyme(Name, Substrates, Products) = Enzyme(Name, Substrates, Products, (), ())
 enzyme_rate(enzyme::Enzyme, metabs, params) = error("rate function not defined for enzyme: $enzyme")
 
+@inline enzyme_name(
+    ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
+) where {Name,Substrates,Products,Activators,Inhibitors} = Name
+
+@inline substrates_name(
+    ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
+) where {Name,Substrates,Products,Activators,Inhibitors} = Substrates
+
+@inline products_name(
+    ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
+) where {Name,Substrates,Products,Activators,Inhibitors} = Products
+
+@inline activators_name(
+    ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
+) where {Name,Substrates,Products,Activators,Inhibitors} = Activators
+
+@inline inhibitors_name(
+    ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
+) where {Name,Substrates,Products,Activators,Inhibitors} = Inhibitors
+
+function disequilibrium_ratio(
+    enzyme::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
+    metabs::LArray{T1,1,Vector{T1},MetabNames},
+    params::LArray{T2,1,Vector{T2},ParamNames},
+) where {Name,Substrates,Products,Activators,Inhibitors,T1<:Real,T2<:Real,MetabNames,ParamNames}
+    keq_sym = Symbol(Name, "_Keq")
+    error_msg = "Parameter $(keq_sym) (equilibrium constant) not found for enzyme $(Name). Please ensure the parameter is defined in the params object."
+    hasproperty(params, keq_sym) ||
+        throw(ArgumentError(error_msg))
+
+    numerator = one(eltype(metabs))
+    for product in Products
+        numerator *= getproperty(metabs, product)
+    end
+
+    denominator = one(eltype(metabs))
+    for substrate in Substrates
+        denominator *= getproperty(metabs, substrate)
+    end
+
+    return numerator / denominator / getproperty(params, keq_sym)
+end
+
+@generated function _generate_Enzymes(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+) where {ConstMetabs,Enzs}
+    return map(Enz -> Enzyme(Enz...), Enzs)
+end
+
 constant_metabs(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = ConstMetabs
 
-enzyme_names(
-    ::MetabolicPathway{ConstMetabs,Enzs},
-) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 1), Enzs)
+function enzyme_names(
+    pathway::MetabolicPathway,
+)
+    enzymes = _generate_Enzymes(pathway)
+    return map(enzyme_name, enzymes)
+end
 
-substrate_names(
-    ::MetabolicPathway{ConstMetabs,Enzs},
-) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 2), Enzs)
+function substrate_names(
+    pathway::MetabolicPathway,
+)
+    enzymes = _generate_Enzymes(pathway)
+    return map(substrates_name, enzymes)
+end
 
-product_names(
-    ::MetabolicPathway{ConstMetabs,Enzs},
-) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 3), Enzs)
+function product_names(
+    pathway::MetabolicPathway,
+)
+    enzymes = _generate_Enzymes(pathway)
+    return map(products_name, enzymes)
+end
 
-activator_names(
-    ::MetabolicPathway{ConstMetabs,Enzs},
-) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 4), Enzs)
+function activator_names(
+    pathway::MetabolicPathway,
+)
+    enzymes = _generate_Enzymes(pathway)
+    return map(activators_name, enzymes)
+end
 
-inhibitor_names(
-    ::MetabolicPathway{ConstMetabs,Enzs},
-) where {ConstMetabs,Enzs} = map(Base.Fix2(getindex, 5), Enzs)
+function inhibitor_names(
+    pathway::MetabolicPathway,
+)
+    enzymes = _generate_Enzymes(pathway)
+    return map(inhibitors_name, enzymes)
+end
+
+function disequilibrium_ratios(
+    pathway::MetabolicPathway,
+    metabs::LArray{T1,1,Vector{T1},MetabNames},
+    params::LArray{T2,1,Vector{T2},ParamNames},
+) where {T1<:Real,T2<:Real,MetabNames,ParamNames}
+    enzymes = _generate_Enzymes(pathway)
+    return map(enzyme -> disequilibrium_ratio(enzyme, metabs, params), enzymes)
+end
 
 @generated function reactants_names(
     ::MetabolicPathway{ConstMetabs,Enzs},

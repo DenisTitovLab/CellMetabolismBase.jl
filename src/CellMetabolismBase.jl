@@ -8,6 +8,12 @@ include("make_EnsembleProblem.jl")
 export make_ODEProblem
 export make_EnsembleProblem
 export enzyme_rate
+export enzyme_name
+export substrates_name
+export products_name
+export activators_name
+export inhibitors_name
+export disequilibrium_ratio
 export disequilibrium_ratios
 export MetabolicPathway
 export Enzyme

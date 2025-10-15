@@ -70,6 +70,12 @@
         0 0 1 -2
         0 0 0 1
     ]
+    test_params = LVector(
+        Enz1_Keq = 10.0,
+        Enz2_Keq = 5.0,
+        Enz3_Keq = 2.0,
+        Enz4_Keq = 1.5,
+    )
 
     # Test metabolite_names function
     @test constant_metabs(test_pathway) == expected_const_metabs
@@ -119,6 +125,35 @@
     benchmark_result = @benchmark inhibitor_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
+
+    enzymes = CellMetabolismBase._generate_Enzymes(test_pathway)
+    @test enzyme_name(enzymes[1]) == :Enz1
+    @test enzyme_name(enzymes[2]) == :Enz2
+    @test substrates_name(enzymes[1]) == (:A_media,)
+    @test substrates_name(enzymes[4]) == (:C, :C)
+    @test products_name(enzymes[1]) == (:A,)
+    @test products_name(enzymes[2]) == (:B, :B)
+    @test activators_name(enzymes[1]) == (:Activator1,)
+    @test activators_name(enzymes[2]) == ()
+    @test inhibitors_name(enzymes[1]) == (:Inhibitor1,)
+    @test inhibitors_name(enzymes[3]) == ()
+    @test enzyme_names(test_pathway) == map(enzyme_name, enzymes)
+    @test substrate_names(test_pathway) == map(substrates_name, enzymes)
+    @test product_names(test_pathway) == map(products_name, enzymes)
+    @test activator_names(test_pathway) == map(activators_name, enzymes)
+    @test inhibitor_names(test_pathway) == map(inhibitors_name, enzymes)
+
+    single_ratios = map(enzyme -> disequilibrium_ratio(enzyme, test_pathway_metabs, test_params), enzymes)
+    @test disequilibrium_ratios(test_pathway, test_pathway_metabs, test_params) == single_ratios
+    @test disequilibrium_ratio(enzymes[1], test_pathway_metabs, test_params) ≈
+          (test_pathway_metabs.A / test_pathway_metabs.A_media) / test_params.Enz1_Keq
+
+    params_missing = LVector(
+        Enz1_Keq = 10.0,
+        Enz2_Keq = 5.0,
+        Enz4_Keq = 1.5,
+    )
+    @test_throws ArgumentError disequilibrium_ratio(enzymes[3], test_pathway_metabs, params_missing)
 
     # Test reactants_names function
     @test reactants_names(test_pathway) == (:A_media, :A, :B, :C, :D)
