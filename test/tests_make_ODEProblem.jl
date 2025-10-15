@@ -1,15 +1,7 @@
-@testitem "disequilibrium_ratios" setup=[Fixtures] begin
+@testitem "disequilibrium_ratios" setup=[TestMetabolicPathway] begin
     using LabelledArrays
 
-    test_pathway = MetabolicPathway(
-        (:A_media,),
-        (
-            (:Enz1, (:A_media,), (:A,)),
-            (:Enz2, (:A,), (:B, :B)),
-            (:Enz3, (:B,), (:C,)),
-            (:Enz4, (:C, :C), (:D,)),
-        ),
-    )
+    test_pathway = TestMetabolicPathway.test_pathway
 
     metabs = LVector(A_media = 2.0, A = 1.0, B = 3.0, C = 4.0, D = 5.0)
     params = LVector(
@@ -38,18 +30,10 @@
     )
 end
 
-@testitem "make_ODEProblem" setup=[Fixtures] begin
+@testitem "make_ODEProblem" setup=[TestMetabolicPathway] begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
 
-    test_pathway = MetabolicPathway(
-        (:A_media,),
-        (
-            (:Enz1, (:A_media,), (:A,)),
-            (:Enz2, (:A,), (:B, :B)),
-            (:Enz3, (:B,), (:C,)),
-            (:Enz4, (:C, :C), (:D,)),
-        ),
-    )
+    test_pathway = TestMetabolicPathway.test_pathway
 
     function rate_enz1(metabs, params)
         return params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq) /

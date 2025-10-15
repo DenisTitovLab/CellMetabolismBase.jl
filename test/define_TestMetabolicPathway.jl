@@ -1,5 +1,15 @@
-@testmodule Fixtures begin
+@testmodule TestMetabolicPathway begin
     using CellMetabolismBase
+
+    const test_pathway = CellMetabolismBase.MetabolicPathway(
+        (:A_media,),
+        (
+            (:Enz1, (:A_media,), (:A,)),
+            (:Enz2, (:A,), (:B, :B)),
+            (:Enz3, (:B,), (:C,)),
+            (:Enz4, (:C, :C), (:D,)),
+        ),
+    )
 
     function CellMetabolismBase.enzyme_rate(
         ::CellMetabolismBase.Enzyme{:Enz1,(:A_media,),(:A,)},

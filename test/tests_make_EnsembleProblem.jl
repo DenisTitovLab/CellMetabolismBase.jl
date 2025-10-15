@@ -1,16 +1,8 @@
-@testitem "make_EnsembleProblem" setup=[Fixtures] begin
+@testitem "make_EnsembleProblem" setup=[TestMetabolicPathway] begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq, Distributions
 
-    # Use the same metabolic pathway as in tests_make_ODEProblem.jl
-    test_pathway = MetabolicPathway(
-        (:A_media,),
-        (
-            (:Enz1, (:A_media,), (:A,)),
-            (:Enz2, (:A,), (:B, :B)),
-            (:Enz3, (:B,), (:C,)),
-            (:Enz4, (:C, :C), (:D,)),
-        ),
-    )
+    # Use the shared metabolic pathway
+    test_pathway = TestMetabolicPathway.test_pathway
 
     # Create test initial conditions and parameters
     init_cond1 = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0, D = 1.0)
