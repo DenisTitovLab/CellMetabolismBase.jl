@@ -1,38 +1,8 @@
-@testitem "MetabolicPathway Validation Tests" begin
+@testitem "MetabolicPathway Validation Tests" setup=[TestMetabolicPathway] begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
 
     # Define a common test pathway with different enzyme types
-    test_pathway = MetabolicPathway(
-        (:A_media,),
-        (
-            (:Enz1, (:A_media,), (:A,)),
-            (:Enz2, (:A,), (:B, :B)),
-            (:Enz3, (:B,), (:C,)),
-            (:Enz4, (:C, :C), (:D,)),
-        ),
-    )
-
-    # Define enzyme rate functions for the standard test pathway
-    function CellMetabolismBase.enzyme_rate(
-        ::Enzyme{:Enz1,(:A_media,),(:A,)},
-        metabs,
-        params,
-    )
-        return params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq) /
-               (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
-    end
-    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz2,(:A,),(:B, :B)}, metabs, params)
-        return params.Enz2_Vmax * (metabs.A - metabs.B^2 / params.Enz2_Keq) /
-               (1 + metabs.A / params.Enz2_K_A + metabs.B^2 / params.Enz2_K_B)
-    end
-    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
-        return params.Enz3_Vmax * (metabs.B - metabs.C / params.Enz3_Keq) /
-               (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_K_C)
-    end
-    function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz4,(:C, :C),(:D,)}, metabs, params)
-        return params.Enz4_Vmax * (metabs.C^2 - metabs.D / params.Enz4_Keq) /
-               (1 + metabs.C^2 / params.Enz4_K_C + metabs.D / params.Enz4_K_D)
-    end
+    test_pathway = TestMetabolicPathway.test_pathway
 
     # Define standard metabolites and parameters
     valid_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0, D = 1.0)
@@ -112,44 +82,71 @@
         simple_metabs,
         simple_params,
     )
-    # Test with a non-Real return type
+
+    # Test with a non-Real return type (String)
+    simple_string_pathway =
+        MetabolicPathway((:A_ext,), ((:SimpleEnzString, (:A_ext,), (:B,)),))
     function CellMetabolismBase.enzyme_rate(
-        ::Enzyme{:SimpleEnz,(:A_ext,),(:B,)},
+        ::Enzyme{:SimpleEnzString,(:A_ext,),(:B,)},
         metabs,
         params,
     )
         return "Not a Real number"
     end
-    @test_throws ErrorException CellMetabolismBase.validate_enzyme_rates(
-        simple_pathway,
-        simple_metabs,
-        simple_params,
+    simple_string_params = LVector(
+        SimpleEnzString_Vmax = 1.0,
+        SimpleEnzString_Km = 0.1,
+        SimpleEnzString_Ki = 0.5,
+        SimpleEnzString_Keq = 2.0,
     )
-    # Test with a non-Real return type
+    @test_throws ErrorException CellMetabolismBase.validate_enzyme_rates(
+        simple_string_pathway,
+        simple_metabs,
+        simple_string_params,
+    )
+
+    # Test with a non-Real return type (Array)
+    simple_array_pathway =
+        MetabolicPathway((:A_ext,), ((:SimpleEnzArray, (:A_ext,), (:B,)),))
     function CellMetabolismBase.enzyme_rate(
-        ::Enzyme{:SimpleEnz,(:A_ext,),(:B,)},
+        ::Enzyme{:SimpleEnzArray,(:A_ext,),(:B,)},
         metabs,
         params,
     )
         return [1.0, 2.0]  # Array instead of Real
     end
-    @test_throws ErrorException CellMetabolismBase.validate_enzyme_rates(
-        simple_pathway,
-        simple_metabs,
-        simple_params,
+    simple_array_params = LVector(
+        SimpleEnzArray_Vmax = 1.0,
+        SimpleEnzArray_Km = 0.1,
+        SimpleEnzArray_Ki = 0.5,
+        SimpleEnzArray_Keq = 2.0,
     )
-    # Test with a non-Real return type
+    @test_throws ErrorException CellMetabolismBase.validate_enzyme_rates(
+        simple_array_pathway,
+        simple_metabs,
+        simple_array_params,
+    )
+
+    # Test with a non-Real return type (Nothing)
+    simple_nothing_pathway =
+        MetabolicPathway((:A_ext,), ((:SimpleEnzNothing, (:A_ext,), (:B,)),))
     function CellMetabolismBase.enzyme_rate(
-        ::Enzyme{:SimpleEnz,(:A_ext,),(:B,)},
+        ::Enzyme{:SimpleEnzNothing,(:A_ext,),(:B,)},
         metabs,
         params,
     )
         return nothing  # Nothing instead of Real
     end
+    simple_nothing_params = LVector(
+        SimpleEnzNothing_Vmax = 1.0,
+        SimpleEnzNothing_Km = 0.1,
+        SimpleEnzNothing_Ki = 0.5,
+        SimpleEnzNothing_Keq = 2.0,
+    )
     @test_throws ErrorException CellMetabolismBase.validate_enzyme_rates(
-        simple_pathway,
+        simple_nothing_pathway,
         simple_metabs,
-        simple_params,
+        simple_nothing_params,
     )
 
     # Missing enzyme rate function test
