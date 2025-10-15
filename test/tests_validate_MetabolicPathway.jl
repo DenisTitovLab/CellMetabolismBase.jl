@@ -1,4 +1,4 @@
-@testitem "MetabolicPathway Validation Tests" begin
+@testitem "MetabolicPathway Validation Tests" setup=[Fixtures] begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
 
     # Define a common test pathway with different enzyme types

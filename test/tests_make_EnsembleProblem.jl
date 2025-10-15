@@ -1,4 +1,4 @@
-@testitem "make_EnsembleProblem" begin
+@testitem "make_EnsembleProblem" setup=[Fixtures] begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq, Distributions
 
     # Use the same metabolic pathway as in tests_make_ODEProblem.jl

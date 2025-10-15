@@ -1,4 +1,4 @@
-@testitem "disequilibrium_ratios" begin
+@testitem "disequilibrium_ratios" setup=[Fixtures] begin
     using LabelledArrays
 
     test_pathway = MetabolicPathway(
@@ -38,7 +38,7 @@
     )
 end
 
-@testitem "make_ODEProblem" begin
+@testitem "make_ODEProblem" setup=[Fixtures] begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
 
     test_pathway = MetabolicPathway(
