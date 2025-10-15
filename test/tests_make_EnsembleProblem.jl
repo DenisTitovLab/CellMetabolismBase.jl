@@ -181,7 +181,7 @@
     @test length(sol) == n_bootstraps
 
     # Check that the solutions vary (due to different random samples)
-    final_vals = [s[end][4] for s in sol.u]  # Get final values for metabolite C
+    final_vals = [s.u[end][4] for s in sol.u]  # Get final values for metabolite C
     @test length(unique(final_vals)) > 1   # Should have different values
 
     # Test with custom time span
@@ -244,7 +244,7 @@
     @test length(sol) == n_bootstraps
 
     # Check that the solutions vary due to different initial conditions
-    initial_vals = [s[1][2] for s in sol.u]  # Get initial values for metabolite A
+    initial_vals = [s.u[1][2] for s in sol.u]  # Get initial values for metabolite A
     @test length(unique(initial_vals)) > 1  # Should have different values
 
     # Verify that all trajectories used the same parameters
@@ -277,7 +277,7 @@
     @test length(sol) == n_bootstraps
 
     # Check that the solutions vary due to different parameters
-    final_vals = [s[end][5] for s in sol.u]  # Get final values for metabolite D
+    final_vals = [s.u[end][5] for s in sol.u]  # Get final values for metabolite D
     @test length(unique(final_vals)) > 1  # Should have different values
 
     # Verify that all trajectories used the same initial conditions
