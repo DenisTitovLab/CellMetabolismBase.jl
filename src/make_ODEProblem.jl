@@ -121,7 +121,7 @@ in `metab_path`, ordered according to `enzyme_names(metab_path)`.
         substrates = Enz[2]
         products = Enz[3]
         keq_sym = Symbol(enz_name, "_Keq")
-        error_msg = "Parameter $(keq_sym) (equilibrium constant) not found for enzyme $(enz_name)."
+        error_msg = "Parameter $(keq_sym) (equilibrium constant) not found for enzyme $(enz_name). Please ensure the parameter is defined in the params object."
 
         numerator_expr = :(one(eltype(metabs)))
         for product in products
@@ -133,13 +133,13 @@ in `metab_path`, ordered according to `enzyme_names(metab_path)`.
             denominator_expr = :( $denominator_expr * metabs.$substrate )
         end
 
-        rq_sym = gensym(:rq)
+        reaction_quotient_sym = gensym(:reaction_quotient)
         block_expr = Expr(
             :block,
             :(hasproperty(params, $(QuoteNode(keq_sym))) ||
                 throw(ArgumentError($(QuoteNode(error_msg))))),
-            Expr(:(=), rq_sym, :( $numerator_expr / $denominator_expr )),
-            :( $rq_sym / getproperty(params, $(QuoteNode(keq_sym))) ),
+            Expr(:(=), reaction_quotient_sym, :( $numerator_expr / $denominator_expr )),
+            :( $reaction_quotient_sym / getproperty(params, $(QuoteNode(keq_sym))) ),
         )
         push!(ratio_exprs, block_expr)
     end
