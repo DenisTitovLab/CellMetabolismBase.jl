@@ -160,7 +160,7 @@ Return the tuple of `Symbols` of inhibitor names of the enzyme.
 """
     disequilibrium_ratio(enzyme::Enzyme, metabs::LArray, params::LArray)
 
-Compute the ratio of product of product concentrations to product of substrate concentrations scaled by the equilibrium constant (i.e., disequilibrium ratio) for the enzyme. Throws an `ArgumentError` if the corresponding `_Keq` parameter is missing in `params`.
+Compute the ratio of the product of product concentrations to the product of substrate concentrations, scaled by the equilibrium constant (i.e., disequilibrium ratio) for the enzyme. Throws an `ArgumentError` if the corresponding `_Keq` parameter is missing in `params`.
 """
 function disequilibrium_ratio(
     enzyme::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
