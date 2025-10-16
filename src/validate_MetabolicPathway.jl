@@ -1,5 +1,14 @@
 using LabelledArrays
 
+"""
+    validate_MetabolicPathway(metabolic_pathway::MetabolicPathway, init_cond::LArray, params::LArray)
+
+Perform structural checks on a metabolic pathway definition, ensuring metabolites present in the
+pathway exist in the labelled initial conditions and that all enzyme rate functions behave
+consistently across basic scenarios, like enzyme_rate being positive when substrates are present
+and products are absent, negative when products are present and substrates are absent, and zero
+when all substrates and products are absent or at equilibrium.
+"""
 function validate_MetabolicPathway(
     metabolic_pathway::MetabolicPathway,
     init_cond::LArray{T1,1,Vector{T1},MetabNames},
@@ -8,7 +17,7 @@ function validate_MetabolicPathway(
 
     pathway_metab_names = Symbol[]
     #TODO: have a dedicated function to extract all metabs and also regulators
-    for metabs in [substrate_names(metabolic_pathway)..., product_names(metabolic_pathway)...]
+    for metabs in [substrates_names(metabolic_pathway)..., products_names(metabolic_pathway)...]
         for metab in metabs
             if !(metab in pathway_metab_names)
                 push!(pathway_metab_names, metab)
