@@ -1,8 +1,21 @@
 using LabelledArrays
 
+"""
+    MetabolicPathway{ConstantMetabolites,Enzymes}
+
+Type-level description of a metabolic pathway where metabolite and enzyme names are embedded in the
+type parameters. Construct instances via [`MetabolicPathway`](@ref).
+"""
 struct MetabolicPathway{ConstantMetabolites,Enzymes} end
 
 #TODO: transition to using DSL and move all the synthax checking to the DSL
+"""
+    MetabolicPathway(ConstantMetabolites, Enzymes)
+
+Validate the provided constant metabolite symbols and enzyme tuples before constructing a
+`MetabolicPathway`. `ConstantMetabolites` must be a tuple of symbols and `Enzymes` a tuple of tuples in
+the format accepted by [`Enzyme`](@ref).
+"""
 function MetabolicPathway(ConstantMetabolites, Enzymes)
     ConstantMetabolites isa Tuple{Vararg{Symbol}} || error("ConstantMetabolites must be a tuple of symbols like (:Glucose, :Lactate, :ATP,)")
     for e in Enzymes
@@ -23,9 +36,22 @@ function MetabolicPathway(ConstantMetabolites, Enzymes)
     return MetabolicPathway{ConstantMetabolites,Enzymes}()
 end
 
+"""
+    Enzyme{Name,Substrates,Products,Activators,Inhibitors}
+
+Type-level representation of an enzyme with named substrates, products, activators, and inhibitors.
+Construct instances via [`Enzyme`](@ref).
+"""
 struct Enzyme{Name,Substrates,Products,Activators,Inhibitors} end
 
 #TODO: transition to using DSL and move all the synthax checking to the DSL
+"""
+    Enzyme(Name, Substrates, Products[, Activators, Inhibitors])
+
+Validate metabolite and regulator tuples before constructing an `Enzyme`. `Name` must be a symbol,
+`Substrates` and `Products` are tuples of symbols with at least one entry, and `Activators` and
+`Inhibitors` are tuples of symbols (possibly empty).
+"""
 function Enzyme(Name, Substrates, Products, Activators, Inhibitors)
     Name isa Symbol || error("Name must be a symbol like :Enz1")
     Substrates isa Tuple{Symbol,Vararg{Symbol}} || error("Substrates must be a tuple of symbols like (:S1,) and enzymes must have at least one substrate")
@@ -35,28 +61,65 @@ function Enzyme(Name, Substrates, Products, Activators, Inhibitors)
     return Enzyme{Name,Substrates,Products,Activators,Inhibitors}()
 end
 Enzyme(Name, Substrates, Products) = Enzyme(Name, Substrates, Products, (), ())
+"""
+    enzyme_rate(enzyme::Enzyme, metabs, params)
+
+Fallback method for enzyme rate calculations. Packages depending on `CellMetabolismBase` should extend
+this function for relevant enzyme variants. The default implementation throws an error to highlight
+missing rate equations.
+"""
 enzyme_rate(enzyme::Enzyme, metabs, params) = error("rate function not defined for enzyme: $enzyme")
 
+"""
+    enzyme_name(enzyme::Enzyme)
+
+Return `Symbol` of enzyme name.
+"""
 @inline enzyme_name(
     ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
 ) where {Name,Substrates,Products,Activators,Inhibitors} = Name
 
+"""
+    substrates_name(enzyme::Enzyme)
+
+Return the tuple of `Symbols` of substrate names of the enzyme reaction.
+"""
 @inline substrates_name(
     ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
 ) where {Name,Substrates,Products,Activators,Inhibitors} = Substrates
 
+"""
+    products_name(enzyme::Enzyme)
+
+Return the tuple of `Symbols` of product names of the enzyme reaction.
+"""
 @inline products_name(
     ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
 ) where {Name,Substrates,Products,Activators,Inhibitors} = Products
 
+"""
+    activators_name(enzyme::Enzyme)
+
+Return the tuple of `Symbols` of activator names of the enzyme.
+"""
 @inline activators_name(
     ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
 ) where {Name,Substrates,Products,Activators,Inhibitors} = Activators
 
+"""
+    inhibitors_name(enzyme::Enzyme)
+
+Return the tuple of `Symbols` of inhibitor names of the enzyme.
+"""
 @inline inhibitors_name(
     ::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
 ) where {Name,Substrates,Products,Activators,Inhibitors} = Inhibitors
 
+"""
+    disequilibrium_ratio(enzyme::Enzyme, metabs::LArray, params::LArray)
+
+Compute the ratio of product of product concentrations to product of substrate concentrations scaled by the equilibrium constant (i.e., disequilibrium ratio) for the enzyme. Throws an `ArgumentError` if the corresponding `_Keq` parameter is missing in `params`.
+"""
 function disequilibrium_ratio(
     enzyme::Enzyme{Name,Substrates,Products,Activators,Inhibitors},
     metabs::LArray{T1,1,Vector{T1},MetabNames},
@@ -86,10 +149,20 @@ end
     return map(Enz -> Enzyme(Enz...), Enzs)
 end
 
+"""
+    constant_metabs(pathway::MetabolicPathway)
+
+Return the tuple of `Symbol` of metabolite names treated as constants in the pathway definition.
+"""
 constant_metabs(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs} = ConstMetabs
 
+"""
+    enzyme_names(pathway::MetabolicPathway)
+
+Return an `NTuple` with `Symbols` of enzyme names in pathway order.
+"""
 function enzyme_names(
     pathway::MetabolicPathway,
 )
@@ -97,6 +170,12 @@ function enzyme_names(
     return map(enzyme_name, enzymes)
 end
 
+"""
+    substrates_names(pathway::MetabolicPathway)
+
+Return an `NTuple` where each entry holds the tuple of `Symbols` of substrate names for each enzyme, matching
+the ordering produced by `enzyme_names(pathway)`.
+"""
 function substrates_names(
     pathway::MetabolicPathway,
 )
@@ -104,6 +183,12 @@ function substrates_names(
     return map(substrates_name, enzymes)
 end
 
+"""
+    products_names(pathway::MetabolicPathway)
+
+Return an `NTuple` where each entry holds the tuple of `Symbols` of product names for each enzyme, matching the
+ordering produced by `enzyme_names(pathway)`.
+"""
 function products_names(
     pathway::MetabolicPathway,
 )
@@ -111,6 +196,12 @@ function products_names(
     return map(products_name, enzymes)
 end
 
+"""
+    activators_names(pathway::MetabolicPathway)
+
+Return an `NTuple` populated with tuple of `Symbols` of activator names for each enzyme, matching the ordering
+produced by `enzyme_names(pathway)`.
+"""
 function activators_names(
     pathway::MetabolicPathway,
 )
@@ -118,6 +209,12 @@ function activators_names(
     return map(activators_name, enzymes)
 end
 
+"""
+    inhibitors_names(pathway::MetabolicPathway)
+
+Return an `NTuple` populated with tuple of `Symbols` of inhibitor names for each enzyme, matching the ordering
+produced by `enzyme_names(pathway)`.
+"""
 function inhibitors_names(
     pathway::MetabolicPathway,
 )
@@ -125,6 +222,12 @@ function inhibitors_names(
     return map(inhibitors_name, enzymes)
 end
 
+"""
+    disequilibrium_ratios(pathway::MetabolicPathway, metabs::LArray, params::LArray)
+
+Return an `NTuple` of [`disequilibrium_ratio`](@ref) values aligned with the pathway enzyme order as
+reported by `enzyme_names(pathway)`.
+"""
 function disequilibrium_ratios(
     pathway::MetabolicPathway,
     metabs::LArray{T1,1,Vector{T1},MetabNames},
@@ -134,6 +237,12 @@ function disequilibrium_ratios(
     return map(enzyme -> disequilibrium_ratio(enzyme, metabs, params), enzymes)
 end
 
+"""
+    reactant_names(pathway::MetabolicPathway)
+
+Return the tuple of unique substrate and product names participating in the pathway reactions, ordered by first
+appearance across enzymes. Excludes activators and inhibitors that are not substrates or products.
+"""
 @generated function reactant_names(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs}
@@ -155,6 +264,12 @@ end
     return unique_reactant_names
 end
 
+"""
+    all_metabolite_names(pathway::MetabolicPathway)
+
+Return the tuple of all unique metabolites involved in the pathway (including regulators), ordered by
+first appearance.
+"""
 @generated function all_metabolite_names(
     ::MetabolicPathway{ConstMetabs,Enzs},
 ) where {ConstMetabs,Enzs}
@@ -179,8 +294,9 @@ end
 #TODO: have an option to use ConstMetabs or not
 """
     stoichiometric_matrix(pathway::MetabolicPathway)
-Returns the stoichiometric matrix of the metabolic pathway.
-Rows correspond to metabolites and columns to enzymes ordered as in `reactant_names(pathway)` and `enzyme_names(pathway)`.
+
+Return the stoichiometric matrix of the metabolic pathway. Rows correspond to metabolites and columns
+to enzymes ordered as in `reactant_names(pathway)` and `enzyme_names(pathway)`.
 """
 @generated function stoichiometric_matrix(
     ::MetabolicPathway{ConstMetabs,Enzs},

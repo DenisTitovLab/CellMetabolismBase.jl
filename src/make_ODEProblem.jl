@@ -93,6 +93,11 @@ end
     return expr
 end
 
+"""
+    enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
+
+Return an `NTuple` of enzyme rates, matching the ordering produced by `enzyme_names(pathway)`.
+"""
 function enzyme_rates(
     metab_path::MetabolicPathway,
     metabs::LArray{T1,1,Vector{T1},MetabNames},
