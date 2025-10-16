@@ -3,18 +3,37 @@ using LabelledArrays
 """
     MetabolicPathway{ConstantMetabolites,Enzymes}
 
-Type-level description of a metabolic pathway where metabolite and enzyme names are embedded in the
-type parameters. Construct instances via [`MetabolicPathway`](@ref).
+Internal parametric type backing [`MetabolicPathway`](@ref). Prefer the constructor helper when
+creating pathways.
 """
 struct MetabolicPathway{ConstantMetabolites,Enzymes} end
 
 #TODO: transition to using DSL and move all the synthax checking to the DSL
 """
-    MetabolicPathway(ConstantMetabolites, Enzymes)
+    MetabolicPathway(constant_metabs::Tuple{Vararg{Symbol}},
+                     enzymes::Tuple{Vararg{<:Tuple}})
 
-Validate the provided constant metabolite symbols and enzyme tuples before constructing a
-`MetabolicPathway`. `ConstantMetabolites` must be a tuple of symbols and `Enzymes` a tuple of tuples in
-the format accepted by [`Enzyme`](@ref).
+Construct an immutable metabolic pathway definition suitable for downstream helpers such as
+[`make_ODEProblem`](@ref) and [`make_EnsembleProblem`](@ref).
+
+# Arguments
+- `constant_metabs`: tuple of metabolite symbols treated as constant during simulations.
+- `enzymes`: tuple of enzyme specification tuples accepted by [`Enzyme`](@ref). Each element must be
+  either `(name, substrates, products)` or `(name, substrates, products, activators, inhibitors)`.
+
+# Returns
+- `MetabolicPathway{ConstantMetabolites,Enzymes}()`: a canonical pathway instance storing metabolite
+  and enzyme names at the type level.
+
+# Example
+```julia
+const_metabs = (:Glucose_media,)
+enzyme_specs = (
+    (:GLUT, (:Glucose_media,), (:Glucose,)),
+    (:HK1, (:Glucose, :ATP), (:G6P, :ADP), (:Phosphate,), (:G6P,)),
+)
+pathway = MetabolicPathway(const_metabs, enzyme_specs)
+```
 """
 function MetabolicPathway(ConstantMetabolites, Enzymes)
     ConstantMetabolites isa Tuple{Vararg{Symbol}} || error("ConstantMetabolites must be a tuple of symbols like (:Glucose, :Lactate, :ATP,)")
@@ -39,18 +58,41 @@ end
 """
     Enzyme{Name,Substrates,Products,Activators,Inhibitors}
 
-Type-level representation of an enzyme with named substrates, products, activators, and inhibitors.
-Construct instances via [`Enzyme`](@ref).
+Internal parametric type backing [`Enzyme`](@ref). Use the exported constructor to create instances.
 """
 struct Enzyme{Name,Substrates,Products,Activators,Inhibitors} end
 
 #TODO: transition to using DSL and move all the synthax checking to the DSL
 """
-    Enzyme(Name, Substrates, Products[, Activators, Inhibitors])
+    Enzyme(name::Symbol,
+           substrates::Tuple{Symbol,Vararg{Symbol}},
+           products::Tuple{Symbol,Vararg{Symbol}})
 
-Validate metabolite and regulator tuples before constructing an `Enzyme`. `Name` must be a symbol,
-`Substrates` and `Products` are tuples of symbols with at least one entry, and `Activators` and
-`Inhibitors` are tuples of symbols (possibly empty).
+    Enzyme(name::Symbol,
+           substrates::Tuple{Symbol,Vararg{Symbol}},
+           products::Tuple{Symbol,Vararg{Symbol}},
+           activators::Tuple{Vararg{Symbol}},
+           inhibitors::Tuple{Vararg{Symbol}})
+
+Validate enzyme metadata before constructing an `Enzyme`. Ensures the presence of at least one
+substrate and product while allowing optional activator and inhibitor tuples.
+
+# Arguments
+- `name`: unique symbol identifying the enzyme.
+- `substrates`: tuple of substrate metabolite symbols; must contain at least one entry.
+- `products`: tuple of product metabolite symbols; must contain at least one entry.
+- `activators`: (optional) tuple of activator symbols, defaults to `()`.
+- `inhibitors`: (optional) tuple of inhibitor symbols, defaults to `()`.
+
+# Returns
+- `Enzyme{Name,Substrates,Products,Activators,Inhibitors}()`: immutable enzyme descriptor with names
+  stored at the type level.
+
+# Example
+```julia
+Enzyme(:GLUT, (:Glucose_media,), (:Glucose,))
+Enzyme(:HK1, (:Glucose, :ATP), (:G6P, :ADP), (:Phosphate,), (:G6P,))
+```
 """
 function Enzyme(Name, Substrates, Products, Activators, Inhibitors)
     Name isa Symbol || error("Name must be a symbol like :Enz1")
