@@ -1,5 +1,5 @@
 @testitem "make_EnsembleProblem" setup=[TestMetabolicPathway] begin
-    using LabelledArrays, BenchmarkTools, OrdinaryDiffEq, Distributions
+    using LabelledArrays, BenchmarkTools, OrdinaryDiffEqFIRK, SciMLBase, Distributions
 
     # Use the shared metabolic pathway
     test_pathway = TestMetabolicPathway.test_pathway
@@ -53,9 +53,9 @@
     @test ensemble_prob isa EnsembleProblem
 
     # Test solving the ensemble problem
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         ensemble_prob,
-        Rodas5P(),
+        RadauIIA9(),
         EnsembleSerial();
         abstol = 1e-15,
         reltol = 1e-8,
@@ -71,9 +71,9 @@
 
     @test ensemble_prob isa EnsembleProblem
 
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         ensemble_prob,
-        Rodas5P(),
+        RadauIIA9(),
         EnsembleSerial();
         abstol = 1e-15,
         reltol = 1e-8,
@@ -89,9 +89,9 @@
 
     @test ensemble_prob isa EnsembleProblem
 
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         ensemble_prob,
-        Rodas5P(),
+        RadauIIA9(),
         EnsembleSerial();
         abstol = 1e-15,
         reltol = 1e-8,
@@ -162,9 +162,9 @@
     @test ensemble_prob isa EnsembleProblem
 
     # Test solving the ensemble problem
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         ensemble_prob,
-        Rodas5P(),
+        RadauIIA9(),
         EnsembleSerial();
         abstol = 1e-12,
         reltol = 1e-8,
@@ -225,9 +225,9 @@
     @test ensemble_prob isa EnsembleProblem
 
     # Test solving the ensemble problem
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         ensemble_prob,
-        Rodas5P(),
+        RadauIIA9(),
         EnsembleSerial();
         abstol = 1e-12,
         reltol = 1e-8,
@@ -258,9 +258,9 @@
     @test ensemble_prob isa EnsembleProblem
 
     # Test solving the ensemble problem
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         ensemble_prob,
-        Rodas5P(),
+        RadauIIA9(),
         EnsembleSerial();
         abstol = 1e-12,
         reltol = 1e-8,
