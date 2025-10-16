@@ -1,4 +1,4 @@
-@testitem "Accessor functions for MetabolicPathways" begin
+@testitem "Accessor functions for MetabolicPathways" setup = [TestMetabolicPathway] begin
     using BenchmarkTools, LabelledArrays
 
     # Test basic Enzyme constructor and its errors
@@ -70,12 +70,7 @@
         0 0 1 -2
         0 0 0 1
     ]
-    test_params = LVector(
-        Enz1_Keq = 10.0,
-        Enz2_Keq = 5.0,
-        Enz3_Keq = 2.0,
-        Enz4_Keq = 1.5,
-    )
+    test_params = LVector(Enz1_Keq = 10.0, Enz2_Keq = 5.0, Enz3_Keq = 2.0, Enz4_Keq = 1.5)
 
     # Test metabolite_names function
     @test constant_metabs(test_pathway) == expected_const_metabs
@@ -143,17 +138,21 @@
     @test activators_names(test_pathway) == map(activators_name, enzymes)
     @test inhibitors_names(test_pathway) == map(inhibitors_name, enzymes)
 
-    single_ratios = map(enzyme -> disequilibrium_ratio(enzyme, test_pathway_metabs, test_params), enzymes)
-    @test disequilibrium_ratios(test_pathway, test_pathway_metabs, test_params) == single_ratios
+    single_ratios = map(
+        enzyme -> disequilibrium_ratio(enzyme, test_pathway_metabs, test_params),
+        enzymes,
+    )
+    @test disequilibrium_ratios(test_pathway, test_pathway_metabs, test_params) ==
+          single_ratios
     @test disequilibrium_ratio(enzymes[1], test_pathway_metabs, test_params) ≈
           (test_pathway_metabs.A / test_pathway_metabs.A_media) / test_params.Enz1_Keq
 
-    params_missing = LVector(
-        Enz1_Keq = 10.0,
-        Enz2_Keq = 5.0,
-        Enz4_Keq = 1.5,
+    params_missing = LVector(Enz1_Keq = 10.0, Enz2_Keq = 5.0, Enz4_Keq = 1.5)
+    @test_throws ArgumentError disequilibrium_ratio(
+        enzymes[3],
+        test_pathway_metabs,
+        params_missing,
     )
-    @test_throws ArgumentError disequilibrium_ratio(enzymes[3], test_pathway_metabs, params_missing)
 
     # Test reactant_names function
     @test reactant_names(test_pathway) == (:A_media, :A, :B, :C, :D)
@@ -171,10 +170,7 @@
 
     shorthand_pathway = MetabolicPathway(
         (:A_media,),
-        (
-            (:Simple, (:A_media,), (:A,)),
-            (:Regulated, (:A,), (:B,), (), ()),
-        ),
+        ((:Simple, (:A_media,), (:A,)), (:Regulated, (:A,), (:B,), (), ())),
     )
     @test activators_names(shorthand_pathway) == ((), ())
     @test inhibitors_names(shorthand_pathway) == ((), ())
@@ -185,4 +181,26 @@
     @test inhibitors_names(shorthand_pathway) == map(inhibitors_name, shorthand_enzymes)
 
     @test_throws ErrorException enzyme_rate(Enzyme(:Random, (:X,), (:Y,)), 1.0, 2.0)
+
+
+    # Test disequilibrium_ratios
+
+    test_pathway = TestMetabolicPathway.test_pathway
+
+    metabs = LVector(A_media = 2.0, A = 1.0, B = 3.0, C = 4.0, D = 5.0)
+    params = LVector(Enz1_Keq = 10.0, Enz2_Keq = 5.0, Enz3_Keq = 2.0, Enz4_Keq = 1.5)
+
+    ratios = CellMetabolismBase.disequilibrium_ratios(test_pathway, metabs, params)
+    @test length(ratios) == 4
+    @test ratios[1] ≈ (metabs.A / metabs.A_media) / params.Enz1_Keq
+    @test ratios[2] ≈ (metabs.B^2 / metabs.A) / params.Enz2_Keq
+    @test ratios[3] ≈ (metabs.C / metabs.B) / params.Enz3_Keq
+    @test ratios[4] ≈ (metabs.D / metabs.C^2) / params.Enz4_Keq
+
+    params_missing = LVector(Enz1_Keq = 10.0, Enz2_Keq = 5.0, Enz4_Keq = 1.5)
+    @test_throws ArgumentError CellMetabolismBase.disequilibrium_ratios(
+        test_pathway,
+        metabs,
+        params_missing,
+    )
 end
