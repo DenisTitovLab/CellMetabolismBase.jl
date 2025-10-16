@@ -11,7 +11,7 @@ end
 
 @testitem "CellMetabolism glycolysis make_ODEProblem" begin
     using CellMetabolism
-    using OrdinaryDiffEq
+    using OrdinaryDiffEqFIRK
     using SciMLBase
 
     pathway = CellMetabolism.glycolysis_pathway
@@ -24,13 +24,14 @@ end
     @test prob.u0 == init
     @test prob.p == params
 
-    sol = solve(prob, Rodas5P(); abstol = 1e-15, reltol = 1e-8, save_everystep = false)
+    sol = solve(prob, RadauIIA9(); abstol = 1e-15, reltol = 1e-8, save_everystep = false)
     @test sol.retcode === SciMLBase.ReturnCode.Success
 end
 
 @testitem "CellMetabolism glycolysis make_EnsembleProblem" begin
     using CellMetabolism
-    using OrdinaryDiffEq
+    using OrdinaryDiffEqFIRK
+    using SciMLBase
 
     pathway = CellMetabolism.glycolysis_pathway
     base_init = deepcopy(CellMetabolism.glycolysis_init_conc)
@@ -43,7 +44,7 @@ end
     ensemble_prob = CellMetabolismBase.make_EnsembleProblem(pathway, init_ensemble, params_ensemble; tspan = tspan)
     sols = solve(
         ensemble_prob,
-        Rodas5P();
+        RadauIIA9();
         trajectories = length(init_ensemble),
         save_everystep = false,
         abstol = 1e-15,

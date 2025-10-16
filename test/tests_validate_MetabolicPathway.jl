@@ -1,5 +1,5 @@
 @testitem "MetabolicPathway Validation Tests" setup=[TestMetabolicPathway] begin
-    using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
+    using LabelledArrays, BenchmarkTools, OrdinaryDiffEqFIRK
 
     # Define a common test pathway with different enzyme types
     test_pathway = TestMetabolicPathway.test_pathway

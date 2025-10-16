@@ -1,5 +1,5 @@
 @testitem "make_ODEProblem" setup=[TestMetabolicPathway] begin
-    using LabelledArrays, BenchmarkTools, OrdinaryDiffEq
+    using LabelledArrays, BenchmarkTools, OrdinaryDiffEqFIRK, SciMLBase
 
     test_pathway = TestMetabolicPathway.test_pathway
 
@@ -105,41 +105,41 @@
     mismatched_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0)
     @test_throws Exception make_ODEProblem(metab_pathway, mismatched_metabs, tspan, params)
 
-    sol_manual = OrdinaryDiffEq.solve(
+    sol_manual = solve(
         prob_manual,
-        Rodas5P(),
+        RadauIIA9(),
         abstol = 1e-15,
         reltol = 1e-8,
         save_everystep = false,
     )
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         prob,
-        Rodas5P(),
+        RadauIIA9(),
         abstol = 1e-15,
         reltol = 1e-8,
         save_everystep = false,
     )
     @test sol_manual == sol
 
-    sol_manual = OrdinaryDiffEq.solve(
+    sol_manual = solve(
         prob_manual,
-        OrdinaryDiffEq.Rodas4P(),
+        RadauIIA5(),
         abstol = 1e-15,
         reltol = 1e-8,
         save_everystep = false,
     )
-    sol = OrdinaryDiffEq.solve(
+    sol = solve(
         prob,
-        OrdinaryDiffEq.Rodas4P(),
+        RadauIIA5(),
         abstol = 1e-15,
         reltol = 1e-8,
         save_everystep = false,
     )
     @test sol_manual == sol
 
-    manual_benchmark_result = @benchmark OrdinaryDiffEq.solve(
+    manual_benchmark_result = @benchmark solve(
         prob_manual,
-        Rodas5P(),
+        RadauIIA9(),
         abstol = 1e-15,
         reltol = 1e-8,
         save_everystep = false,
@@ -147,9 +147,9 @@
     @test mean(manual_benchmark_result.times) <= 20_000_000 #ns
     @test manual_benchmark_result.allocs < 30_000
 
-    package_benchmark_result = @benchmark OrdinaryDiffEq.solve(
+    package_benchmark_result = @benchmark solve(
         prob,
-        Rodas5P(),
+        RadauIIA9(),
         abstol = 1e-15,
         reltol = 1e-8,
         save_everystep = false,

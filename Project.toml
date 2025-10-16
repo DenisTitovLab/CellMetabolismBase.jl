@@ -15,7 +15,7 @@ CellMetabolism = "0.1"
 Distributions = "0.25.117"
 JET = "0.10"
 LabelledArrays = "1.16.0"
-OrdinaryDiffEq = "6.91"
+OrdinaryDiffEqFIRK = "1.16"
 SciMLBase = "2.75.1"
 Test = "1.10"
 TestItemRunner = "1.1.0"
@@ -26,9 +26,9 @@ Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CellMetabolism = "d7c5e2dd-9163-4219-82bc-37cddd708ca9"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+OrdinaryDiffEqFIRK = "5960d6e9-dd7a-4743-88e7-cf307b64f125"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 
 [targets]
-test = ["Aqua", "JET", "Test", "TestItemRunner", "BenchmarkTools", "OrdinaryDiffEq", "CellMetabolism"]
+test = ["Aqua", "JET", "Test", "TestItemRunner", "BenchmarkTools", "OrdinaryDiffEqFIRK", "CellMetabolism"]
