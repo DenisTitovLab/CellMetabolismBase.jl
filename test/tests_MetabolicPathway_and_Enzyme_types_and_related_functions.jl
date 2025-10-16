@@ -91,17 +91,17 @@
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    # Test substrate_names function
-    @test substrate_names(test_pathway) == expected_substrate_names
-    substrate_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark substrate_names($test_pathway)
+    # Test substrates_names function
+    @test substrates_names(test_pathway) == expected_substrate_names
+    substrates_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark substrates_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    # Test product_names function
-    @test product_names(test_pathway) == expected_product_names
-    product_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark product_names($test_pathway)
+    # Test products_names function
+    @test products_names(test_pathway) == expected_product_names
+    products_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark products_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
@@ -112,17 +112,17 @@
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    # Test activator_names function
-    @test activator_names(test_pathway) == expected_activator_names
-    activator_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark activator_names($test_pathway)
+    # Test activators_names function
+    @test activators_names(test_pathway) == expected_activator_names
+    activators_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark activators_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
-    # Test inhibitor_names function
-    @test inhibitor_names(test_pathway) == expected_inhibitor_names
-    inhibitor_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark inhibitor_names($test_pathway)
+    # Test inhibitors_names function
+    @test inhibitors_names(test_pathway) == expected_inhibitor_names
+    inhibitors_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark inhibitors_names($test_pathway)
     @test mean(benchmark_result.times) <= 10 #ns
     @test benchmark_result.allocs == 0
 
@@ -138,10 +138,10 @@
     @test inhibitors_name(enzymes[1]) == (:Inhibitor1,)
     @test inhibitors_name(enzymes[3]) == ()
     @test enzyme_names(test_pathway) == map(enzyme_name, enzymes)
-    @test substrate_names(test_pathway) == map(substrates_name, enzymes)
-    @test product_names(test_pathway) == map(products_name, enzymes)
-    @test activator_names(test_pathway) == map(activators_name, enzymes)
-    @test inhibitor_names(test_pathway) == map(inhibitors_name, enzymes)
+    @test substrates_names(test_pathway) == map(substrates_name, enzymes)
+    @test products_names(test_pathway) == map(products_name, enzymes)
+    @test activators_names(test_pathway) == map(activators_name, enzymes)
+    @test inhibitors_names(test_pathway) == map(inhibitors_name, enzymes)
 
     single_ratios = map(enzyme -> disequilibrium_ratio(enzyme, test_pathway_metabs, test_params), enzymes)
     @test disequilibrium_ratios(test_pathway, test_pathway_metabs, test_params) == single_ratios

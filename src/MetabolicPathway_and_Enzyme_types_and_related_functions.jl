@@ -97,28 +97,28 @@ function enzyme_names(
     return map(enzyme_name, enzymes)
 end
 
-function substrate_names(
+function substrates_names(
     pathway::MetabolicPathway,
 )
     enzymes = _generate_Enzymes(pathway)
     return map(substrates_name, enzymes)
 end
 
-function product_names(
+function products_names(
     pathway::MetabolicPathway,
 )
     enzymes = _generate_Enzymes(pathway)
     return map(products_name, enzymes)
 end
 
-function activator_names(
+function activators_names(
     pathway::MetabolicPathway,
 )
     enzymes = _generate_Enzymes(pathway)
     return map(activators_name, enzymes)
 end
 
-function inhibitor_names(
+function inhibitors_names(
     pathway::MetabolicPathway,
 )
     enzymes = _generate_Enzymes(pathway)
@@ -160,10 +160,10 @@ end
 ) where {ConstMetabs,Enzs}
     unique_metab_names = ()
     tuples_of_metabs = (
-        substrate_names(MetabolicPathway{ConstMetabs,Enzs}())...,
-        product_names(MetabolicPathway{ConstMetabs,Enzs}())...,
-        activator_names(MetabolicPathway{ConstMetabs,Enzs}())...,
-        inhibitor_names(MetabolicPathway{ConstMetabs,Enzs}())...,
+        substrates_names(MetabolicPathway{ConstMetabs,Enzs}())...,
+        products_names(MetabolicPathway{ConstMetabs,Enzs}())...,
+        activators_names(MetabolicPathway{ConstMetabs,Enzs}())...,
+        inhibitors_names(MetabolicPathway{ConstMetabs,Enzs}())...,
     )
     for metab_tuple in tuples_of_metabs
         for metab_name in metab_tuple

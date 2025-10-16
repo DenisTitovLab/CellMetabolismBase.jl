@@ -29,3 +29,4 @@
 - [x] 2025-10-15 — Added single-enzyme accessor helpers, centralized `_generate_Enzymes`, and refactored pathway accessors plus disequilibrium ratios to delegate through them; updated exports ready for testing.
 - [x] 2025-10-15 — Detected `/usr/local/bin/julia` (v1.10) taking precedence over juliaup shim; reran test suite with `~/.juliaup/bin/julia` (v1.12) and confirmed all tests pass.
 - [x] 2025-10-15 — Renamed `reactants_names` accessor to `reactant_names` across source, exports, and tests.
+- [x] 2025-10-15 — Renamed pathway aggregate accessors to `substrates_names`, `products_names`, `activators_names`, and `inhibitors_names`; updated exports, validations, and tests to match.

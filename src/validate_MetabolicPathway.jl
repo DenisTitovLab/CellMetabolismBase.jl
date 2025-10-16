@@ -8,7 +8,7 @@ function validate_MetabolicPathway(
 
     pathway_metab_names = Symbol[]
     #TODO: have a dedicated function to extract all metabs and also regulators
-    for metabs in [substrate_names(metabolic_pathway)..., product_names(metabolic_pathway)...]
+    for metabs in [substrates_names(metabolic_pathway)..., products_names(metabolic_pathway)...]
         for metab in metabs
             if !(metab in pathway_metab_names)
                 push!(pathway_metab_names, metab)
