@@ -40,7 +40,7 @@
     )
 
     test_pathway_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0, D = 1.0)
-    expected_const_metabs = (:A_media,)
+    expected_constant_metabolites = (:A_media,)
     expected_enzyme_names = (:Enz1, :Enz2, :Enz3, :Enz4)
     expected_substrate_names = ((:A_media,), (:A,), (:B,), (:C, :C))
     expected_product_names = ((:A,), (:B, :B), (:C,), (:D,))
@@ -73,30 +73,30 @@
     test_params = LVector(Enz1_Keq = 10.0, Enz2_Keq = 5.0, Enz3_Keq = 2.0, Enz4_Keq = 1.5)
 
     # Test metabolite_names function
-    @test constant_metabs(test_pathway) == expected_const_metabs
-    constant_metabs(test_pathway) isa Tuple{Vararg{Symbol}}
-    benchmark_result = @benchmark constant_metabs($test_pathway)
+    @test constant_metabolites(test_pathway) == expected_constant_metabolites
+    constant_metabolites(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark constant_metabolites($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
-    # Test enzyme_names function
-    @test enzyme_names(test_pathway) == expected_enzyme_names
-    enzyme_names(test_pathway) isa Tuple{Vararg{Symbol}}
-    benchmark_result = @benchmark enzyme_names($test_pathway)
+    # Test enzymes function
+    @test enzymes(test_pathway) == expected_enzyme_names
+    enzymes(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark enzymes($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
-    # Test substrates_names function
-    @test substrates_names(test_pathway) == expected_substrate_names
-    substrates_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark substrates_names($test_pathway)
+    # Test substrates function
+    @test substrates(test_pathway) == expected_substrate_names
+    substrates(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark substrates($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
-    # Test products_names function
-    @test products_names(test_pathway) == expected_product_names
-    products_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark products_names($test_pathway)
+    # Test products function
+    @test products(test_pathway) == expected_product_names
+    products(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark products($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
@@ -107,64 +107,64 @@
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
-    # Test activators_names function
-    @test activators_names(test_pathway) == expected_activator_names
-    activators_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark activators_names($test_pathway)
+    # Test activators function
+    @test activators(test_pathway) == expected_activator_names
+    activators(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark activators($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
-    # Test inhibitors_names function
-    @test inhibitors_names(test_pathway) == expected_inhibitor_names
-    inhibitors_names(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
-    benchmark_result = @benchmark inhibitors_names($test_pathway)
+    # Test inhibitors function
+    @test inhibitors(test_pathway) == expected_inhibitor_names
+    inhibitors(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
+    benchmark_result = @benchmark inhibitors($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
-    enzymes = CellMetabolismBase._generate_Enzymes(test_pathway)
-    @test enzyme_name(enzymes[1]) == :Enz1
-    @test enzyme_name(enzymes[2]) == :Enz2
-    @test substrates_name(enzymes[1]) == (:A_media,)
-    @test substrates_name(enzymes[4]) == (:C, :C)
-    @test products_name(enzymes[1]) == (:A,)
-    @test products_name(enzymes[2]) == (:B, :B)
-    @test activators_name(enzymes[1]) == (:Activator1,)
-    @test activators_name(enzymes[2]) == ()
-    @test inhibitors_name(enzymes[1]) == (:Inhibitor1,)
-    @test inhibitors_name(enzymes[3]) == ()
-    @test enzyme_names(test_pathway) == map(enzyme_name, enzymes)
-    @test substrates_names(test_pathway) == map(substrates_name, enzymes)
-    @test products_names(test_pathway) == map(products_name, enzymes)
-    @test activators_names(test_pathway) == map(activators_name, enzymes)
-    @test inhibitors_names(test_pathway) == map(inhibitors_name, enzymes)
+    enzyme_instances = CellMetabolismBase._generate_Enzymes(test_pathway)
+    @test name(enzyme_instances[1]) == :Enz1
+    @test name(enzyme_instances[2]) == :Enz2
+    @test substrates(enzyme_instances[1]) == (:A_media,)
+    @test substrates(enzyme_instances[4]) == (:C, :C)
+    @test products(enzyme_instances[1]) == (:A,)
+    @test products(enzyme_instances[2]) == (:B, :B)
+    @test activators(enzyme_instances[1]) == (:Activator1,)
+    @test activators(enzyme_instances[2]) == ()
+    @test inhibitors(enzyme_instances[1]) == (:Inhibitor1,)
+    @test inhibitors(enzyme_instances[3]) == ()
+    @test enzymes(test_pathway) == map(name, enzyme_instances)
+    @test substrates(test_pathway) == map(substrates, enzyme_instances)
+    @test products(test_pathway) == map(products, enzyme_instances)
+    @test activators(test_pathway) == map(activators, enzyme_instances)
+    @test inhibitors(test_pathway) == map(inhibitors, enzyme_instances)
 
     single_ratios = map(
         enzyme -> disequilibrium_ratio(enzyme, test_pathway_metabs, test_params),
-        enzymes,
+        enzyme_instances,
     )
     @test disequilibrium_ratios(test_pathway, test_pathway_metabs, test_params) ==
           single_ratios
-    @test disequilibrium_ratio(enzymes[1], test_pathway_metabs, test_params) ≈
+    @test disequilibrium_ratio(enzyme_instances[1], test_pathway_metabs, test_params) ≈
           (test_pathway_metabs.A / test_pathway_metabs.A_media) / test_params.Enz1_Keq
 
     params_missing = LVector(Enz1_Keq = 10.0, Enz2_Keq = 5.0, Enz4_Keq = 1.5)
     @test_throws ArgumentError disequilibrium_ratio(
-        enzymes[3],
+        enzyme_instances[3],
         test_pathway_metabs,
         params_missing,
     )
 
-    # Test reactant_names function
-    @test reactant_names(test_pathway) == (:A_media, :A, :B, :C, :D)
-    reactant_names(test_pathway) isa Tuple{Vararg{Symbol}}
-    benchmark_result = @benchmark reactant_names($test_pathway)
+    # Test reactants function
+    @test reactants(test_pathway) == (:A_media, :A, :B, :C, :D)
+    reactants(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark reactants($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
-    # Test all_metabolite_names function
-    @test all_metabolite_names(test_pathway) == expected_all_metabolite_names
-    all_metabolite_names(test_pathway) isa Tuple{Vararg{Symbol}}
-    benchmark_result = @benchmark all_metabolite_names($test_pathway)
+    # Test metabolites function
+    @test metabolites(test_pathway) == expected_all_metabolite_names
+    metabolites(test_pathway) isa Tuple{Vararg{Symbol}}
+    benchmark_result = @benchmark metabolites($test_pathway)
     @test mean(benchmark_result.times) <= 20 #ns
     @test benchmark_result.allocs == 0
 
@@ -172,15 +172,15 @@
         (:A_media,),
         ((:Simple, (:A_media,), (:A,)), (:Regulated, (:A,), (:B,), (), ())),
     )
-    @test activators_names(shorthand_pathway) == ((), ())
-    @test inhibitors_names(shorthand_pathway) == ((), ())
+    @test activators(shorthand_pathway) == ((), ())
+    @test inhibitors(shorthand_pathway) == ((), ())
     shorthand_enzymes = CellMetabolismBase._generate_Enzymes(shorthand_pathway)
-    @test activators_name(shorthand_enzymes[1]) == ()
-    @test inhibitors_name(shorthand_enzymes[1]) == ()
-    @test activators_names(shorthand_pathway) == map(activators_name, shorthand_enzymes)
-    @test inhibitors_names(shorthand_pathway) == map(inhibitors_name, shorthand_enzymes)
+    @test activators(shorthand_enzymes[1]) == ()
+    @test inhibitors(shorthand_enzymes[1]) == ()
+    @test activators(shorthand_pathway) == map(activators, shorthand_enzymes)
+    @test inhibitors(shorthand_pathway) == map(inhibitors, shorthand_enzymes)
 
-    @test_throws ErrorException enzyme_rate(Enzyme(:Random, (:X,), (:Y,)), 1.0, 2.0)
+    @test_throws ErrorException rate(Enzyme(:Random, (:X,), (:Y,)), 1.0, 2.0)
 end
 
 @testitem "remove_regulation throws error for undefined enzyme" begin

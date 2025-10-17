@@ -45,26 +45,26 @@ using CellMetabolismBase, OrdinaryDiffEq, LabelledArrays, CairoMakie, Distributi
 # Define a simple enzyme-catalyzed pathway consisting of three enzymes:
 # First argument is a tuple of constant metabolites (if any)
 # Second argument is a tuple of enzyme definitions
-# Each enzyme is defined as (enzyme_name, (substrates...), (products...))
+# Each enzyme is defined as (name, (substrates...), (products...))
 pathway = MetabolicPathway(
     (:A_media,),
     ((:Enz1, (:A_media,), (:A,)), (:Enz2, (:A,), (:B, :B)), (:Enz3, (:B,), (:C,))),
 )
 
 # Define enzyme rate laws
-function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
+function CellMetabolismBase.rate(::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
     rate =
         params.Enz1_Vmax * (metabs.A_media - metabs.A / params.Enz1_Keq) /
         (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
     return rate
 end
-function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz2,(:A,),(:B, :B)}, metabs, params)
+function CellMetabolismBase.rate(::Enzyme{:Enz2,(:A,),(:B, :B)}, metabs, params)
     rate =
         params.Enz2_Vmax * (metabs.A - metabs.B^2 / params.Enz2_Keq) /
         (1 + metabs.A / params.Enz2_K_A + (metabs.B / params.Enz2_K_B)^2)
     return rate
 end
-function CellMetabolismBase.enzyme_rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
+function CellMetabolismBase.rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
     rate =
         params.Enz3_Vmax * (metabs.B - metabs.C / params.Enz3_Keq) /
         (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_Keq)

@@ -21,7 +21,7 @@ An `ODEProblem` instance that encapsulates the differential equations governing 
 
 # Details
 The returned ODEProblem uses `metabolicpathway_odes!` to compute the time evolution of metabolite concentrations
-by adjusting their rates based on enzyme kinetics defined in `enzyme_rates`. Ensure that `metabolic_pathway`,
+by adjusting their rates based on enzyme kinetics defined in `rates`. Ensure that `metabolic_pathway`,
 `init_cond`, and `params` have matching entries for substrates, products, and parameters for correct simulation.
 
 # Example
@@ -62,7 +62,7 @@ function metabolicpathway_odes!(
     params::LArray{T3,1,Vector{T3},ParamNames},
     t,
 ) where {T1<:Real,T2<:Real,T3<:Real,MetabNames,ParamNames}
-    enz_rates = enzyme_rates(metab_path, metabs, params)
+    enz_rates = rates(metab_path, metabs, params)
     calculate_dmetabs_from_enz_rates!(metab_path, dmetabs, enz_rates)
     return nothing
 end
@@ -94,15 +94,15 @@ end
 end
 
 """
-    enzyme_rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
+    rates(metab_path::MetabolicPathway, metabs::LArray, params::LArray)
 
-Return an `NTuple` of enzyme rates, matching the ordering produced by `enzyme_names(pathway)`.
+Return an `NTuple` of enzyme rates, matching the ordering produced by `enzymes(pathway)`.
 """
-function enzyme_rates(
+function rates(
     metab_path::MetabolicPathway,
     metabs::LArray{T1,1,Vector{T1},MetabNames},
     params::LArray{T2,1,Vector{T2},ParamNames},
 ) where {T1<:Real,T2<:Real,MetabNames,ParamNames}
-    enzymes = _generate_Enzymes(metab_path)
-    return map(enzyme -> CellMetabolismBase.enzyme_rate(enzyme, metabs, params), enzymes)
+    enzyme_instances = _generate_Enzymes(metab_path)
+    return map(enzyme -> CellMetabolismBase.rate(enzyme, metabs, params), enzyme_instances)
 end
