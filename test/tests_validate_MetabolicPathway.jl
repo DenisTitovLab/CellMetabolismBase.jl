@@ -224,8 +224,8 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
+        params,
         ::Val{:Act},
     )
         params = deepcopy(params)
@@ -234,8 +234,8 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
+        params,
         ::Val{:Inh},
     )
         params = deepcopy(params)
@@ -258,12 +258,12 @@
     )
 
     function CellMetabolismBase.remove_regulation(
-        params,
         enzyme::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
+        params,
     )
         params = deepcopy(params)
-        params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Act))
-        params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Inh))
+        params = CellMetabolismBase.remove_regulation(enzyme, params, Val(:Act))
+        params = CellMetabolismBase.remove_regulation(enzyme, params, Val(:Inh))
         return params
     end
 
@@ -288,19 +288,19 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:FaultyEnz,(:S,),(:P,),(:Act,),()},
+        params,
         ::Val{:Act},
     )
         return deepcopy(params) # regulator is not actually removed
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         enzyme::Enzyme{:FaultyEnz,(:S,),(:P,),(:Act,),()},
+        params,
     )
         params = deepcopy(params)
-        params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Act))
+        params = CellMetabolismBase.remove_regulation(enzyme, params, Val(:Act))
         return params
     end
 
@@ -333,8 +333,8 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:MissingSpecific,(:S,),(:P,),(:Act,),()},
+        params,
     )
         params = deepcopy(params)
         setproperty!(params, :MissingSpecific_K_act, 0.0)

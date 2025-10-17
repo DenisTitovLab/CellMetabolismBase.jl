@@ -63,9 +63,9 @@ function validate_regulation_removal(
             test_params = @LArray eps() .+ rand(length(params)) propertynames(params)
 
             specific_params = try
-                remove_regulation(test_params, enzyme, Val(reg))
+                remove_regulation(enzyme, test_params, Val(reg))
             catch err
-                error("remove_regulation(params, $(name(enzyme)), Val($(reg))) failed during validation: $(err)")
+                error("remove_regulation($(name(enzyme)), params, Val($(reg))) failed during validation: $(err)")
             end
 
             rate_high = rate(enzyme, test_metabs_high, specific_params)
@@ -74,7 +74,7 @@ function validate_regulation_removal(
                 error("remove_regulation for enzyme $(name(enzyme)) and regulator $(reg) produced non-finite rates during validation.")
 
             isapprox(rate_high, rate_low; atol=1e-8, rtol=1e-6) ||
-                error("remove_regulation(params, $(name(enzyme)), Val($(reg))) did not eliminate dependence on regulator $(reg).")
+                error("remove_regulation($(name(enzyme)), params, Val($(reg))) did not eliminate dependence on regulator $(reg).")
         end
 
         # Validate combined regulator removal
@@ -87,18 +87,18 @@ function validate_regulation_removal(
         combined_params = @LArray eps() .+ rand(length(params)) propertynames(params)
 
         all_removed_params = try
-            remove_regulation(combined_params, enzyme)
+            remove_regulation(enzyme, combined_params)
         catch err
-            error("remove_regulation(params, $(name(enzyme))) failed during validation: $(err)")
+            error("remove_regulation($(name(enzyme)), params) failed during validation: $(err)")
         end
 
         rate_high_all = rate(enzyme, combined_metabs_high, all_removed_params)
         rate_low_all = rate(enzyme, combined_metabs_low, all_removed_params)
         (isfinite(rate_high_all) && isfinite(rate_low_all)) ||
-            error("remove_regulation(params, $(name(enzyme))) produced non-finite rates during validation.")
+            error("remove_regulation($(name(enzyme)), params) produced non-finite rates during validation.")
 
         isapprox(rate_high_all, rate_low_all; atol=1e-8, rtol=1e-6) ||
-            error("remove_regulation(params, $(name(enzyme))) did not eliminate dependence on its regulators $(Tuple(regulator_list)).")
+            error("remove_regulation($(name(enzyme)), params) did not eliminate dependence on its regulators $(Tuple(regulator_list)).")
     end
 
     return nothing

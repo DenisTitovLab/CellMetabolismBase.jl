@@ -123,8 +123,8 @@ params = LVector(
 
 # Extend remove_regulation for specific regulator
 function CellMetabolismBase.remove_regulation(
-    params,
     enzyme::Enzyme{:HK1,(:Glucose, :ATP),(:G6P, :ADP),(:Phosphate,),(:G6P,)},
+    params,
     ::Val{:Phosphate},
 )
     params = deepcopy(params)
@@ -134,23 +134,23 @@ end
 
 # Extend remove_regulation to remove all regulation
 function CellMetabolismBase.remove_regulation(
-    params,
     enzyme::Enzyme{:HK1,(:Glucose, :ATP),(:G6P, :ADP),(:Phosphate,),(:G6P,)},
+    params,
 )
     params = deepcopy(params)
     setproperty!(params, :HK1_L, 0.0)
     # Remove all regulators
-    params = remove_regulation(params, enzyme, Val(:Phosphate))
-    params = remove_regulation(params, enzyme, Val(:G6P))
+    params = remove_regulation(enzyme, params, Val(:Phosphate))
+    params = remove_regulation(enzyme, params, Val(:G6P))
     return params
 end
 
 # Now you can use the functions
-no_pi = remove_regulation(params, hk1, Val(:Phosphate))
+no_pi = remove_regulation(hk1, params, Val(:Phosphate))
 @assert isinf(no_pi.HK1_K_a_Pi)
 @assert no_pi.HK1_K_i_G6P_reg == params.HK1_K_i_G6P_reg
 
-no_reg = remove_regulation(params, hk1)
+no_reg = remove_regulation(hk1, params)
 @assert isinf(no_reg.HK1_K_a_Pi)
 @assert no_reg.HK1_L == 0.0
 ```
