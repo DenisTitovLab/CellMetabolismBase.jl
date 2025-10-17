@@ -243,6 +243,20 @@
         return params
     end
 
+    regulated_metabs = LVector(S = 1.0, P = 0.2, Act = 0.4, Inh = 0.3)
+    regulated_params = LVector(
+        RegEnz_Vmax = 2.0,
+        RegEnz_Keq = 5.0,
+        RegEnz_K_act = 1.2,
+        RegEnz_K_inh = 0.8,
+    )
+
+    @test_throws ErrorException CellMetabolismBase.validate_regulation_removal(
+        regulated_pathway,
+        regulated_metabs,
+        regulated_params,
+    )
+
     function CellMetabolismBase.remove_regulation(
         params,
         enzyme::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
@@ -252,14 +266,6 @@
         params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Inh))
         return params
     end
-
-    regulated_metabs = LVector(S = 1.0, P = 0.2, Act = 0.4, Inh = 0.3)
-    regulated_params = LVector(
-        RegEnz_Vmax = 2.0,
-        RegEnz_Keq = 5.0,
-        RegEnz_K_act = 1.2,
-        RegEnz_K_inh = 0.8,
-    )
 
     @test_nowarn CellMetabolismBase.validate_MetabolicPathway(
         regulated_pathway,
