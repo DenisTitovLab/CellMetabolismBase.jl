@@ -11,7 +11,7 @@
         ),
     )
 
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::CellMetabolismBase.Enzyme{:Enz1,(:A_media,),(:A,)},
         metabs,
         params,
@@ -20,7 +20,7 @@
                (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
     end
 
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::CellMetabolismBase.Enzyme{:Enz2,(:A,),(:B, :B)},
         metabs,
         params,
@@ -29,7 +29,7 @@
                (1 + metabs.A / params.Enz2_K_A + metabs.B^2 / params.Enz2_K_B)
     end
 
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::CellMetabolismBase.Enzyme{:Enz3,(:B,),(:C,)},
         metabs,
         params,
@@ -38,7 +38,7 @@
                (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_K_C)
     end
 
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::CellMetabolismBase.Enzyme{:Enz4,(:C, :C),(:D,)},
         metabs,
         params,

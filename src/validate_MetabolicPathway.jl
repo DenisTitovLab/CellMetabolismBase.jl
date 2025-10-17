@@ -5,7 +5,7 @@ using LabelledArrays
 
 Perform structural checks on a metabolic pathway definition, ensuring metabolites present in the
 pathway exist in the labelled initial conditions and that all enzyme rate functions behave
-consistently across basic scenarios, like enzyme_rate being positive when substrates are present
+consistently across basic scenarios, like `rate` being positive when substrates are present
 and products are absent, negative when products are present and substrates are absent, and zero
 when all substrates and products are absent or at equilibrium.
 """
@@ -16,7 +16,7 @@ function validate_MetabolicPathway(
 ) where {T1<:Real,T2<:Real,MetabNames,ParamNames}
 
     # validate metabolic pathway metabolites are in MetabNames
-    for metab in all_metabolite_names(metabolic_pathway)
+    for metab in metabolites(metabolic_pathway)
         if !(metab in MetabNames)
             error("Metabolite $metab not found in initial conditions LArray.")
         end
@@ -28,7 +28,7 @@ function validate_MetabolicPathway(
         - maybe enforce that params also have Metabolite names in params that correspond to enzyme substrates/products/regulators
     =#
 
-    #validate enzyme_rate equations
+    #validate rate equations
     validate_enzyme_rates(metabolic_pathway, init_cond, params)
 
     #validate regulation removal behaviour when regulators are present
@@ -47,13 +47,13 @@ function validate_regulation_removal(
 
     for enzyme in enzymes
         regulator_list = Symbol[]
-        append!(regulator_list, activators_name(enzyme))
-        append!(regulator_list, inhibitors_name(enzyme))
+        append!(regulator_list, activators(enzyme))
+        append!(regulator_list, inhibitors(enzyme))
         isempty(regulator_list) && continue
 
         for reg in regulator_list
             hasproperty(init_cond, reg) ||
-                error("Regulator $(reg) for enzyme $(enzyme_name(enzyme)) is missing from initial conditions; cannot validate remove_regulation.")
+                error("Regulator $(reg) for enzyme $(name(enzyme)) is missing from initial conditions; cannot validate remove_regulation.")
 
             test_metabs_high = @LArray eps() .+ rand(length(init_cond)) propertynames(init_cond)
             test_metabs_low = deepcopy(test_metabs_high)
@@ -63,18 +63,18 @@ function validate_regulation_removal(
             test_params = @LArray eps() .+ rand(length(params)) propertynames(params)
 
             specific_params = try
-                remove_regulation(test_params, enzyme, Val(reg))
+                remove_regulation(enzyme, test_params, Val(reg))
             catch err
-                error("remove_regulation(params, $(enzyme_name(enzyme)), Val($(reg))) failed during validation: $(err)")
+                error("remove_regulation($(name(enzyme)), params, Val($(reg))) failed during validation: $(err)")
             end
 
-            rate_high = enzyme_rate(enzyme, test_metabs_high, specific_params)
-            rate_low = enzyme_rate(enzyme, test_metabs_low, specific_params)
+            rate_high = rate(enzyme, test_metabs_high, specific_params)
+            rate_low = rate(enzyme, test_metabs_low, specific_params)
             (isfinite(rate_high) && isfinite(rate_low)) ||
-                error("remove_regulation for enzyme $(enzyme_name(enzyme)) and regulator $(reg) produced non-finite rates during validation.")
+                error("remove_regulation for enzyme $(name(enzyme)) and regulator $(reg) produced non-finite rates during validation.")
 
             isapprox(rate_high, rate_low; atol=1e-8, rtol=1e-6) ||
-                error("remove_regulation(params, $(enzyme_name(enzyme)), Val($(reg))) did not eliminate dependence on regulator $(reg).")
+                error("remove_regulation($(name(enzyme)), params, Val($(reg))) did not eliminate dependence on regulator $(reg).")
         end
 
         # Validate combined regulator removal
@@ -87,18 +87,18 @@ function validate_regulation_removal(
         combined_params = @LArray eps() .+ rand(length(params)) propertynames(params)
 
         all_removed_params = try
-            remove_regulation(combined_params, enzyme)
+            remove_regulation(enzyme, combined_params)
         catch err
-            error("remove_regulation(params, $(enzyme_name(enzyme))) failed during validation: $(err)")
+            error("remove_regulation($(name(enzyme)), params) failed during validation: $(err)")
         end
 
-        rate_high_all = enzyme_rate(enzyme, combined_metabs_high, all_removed_params)
-        rate_low_all = enzyme_rate(enzyme, combined_metabs_low, all_removed_params)
+        rate_high_all = rate(enzyme, combined_metabs_high, all_removed_params)
+        rate_low_all = rate(enzyme, combined_metabs_low, all_removed_params)
         (isfinite(rate_high_all) && isfinite(rate_low_all)) ||
-            error("remove_regulation(params, $(enzyme_name(enzyme))) produced non-finite rates during validation.")
+            error("remove_regulation($(name(enzyme)), params) produced non-finite rates during validation.")
 
         isapprox(rate_high_all, rate_low_all; atol=1e-8, rtol=1e-6) ||
-            error("remove_regulation(params, $(enzyme_name(enzyme))) did not eliminate dependence on its regulators $(Tuple(regulator_list)).")
+            error("remove_regulation($(name(enzyme)), params) did not eliminate dependence on its regulators $(Tuple(regulator_list)).")
     end
 
     return nothing
@@ -113,37 +113,37 @@ function validate_enzyme_rates(
     for Enz in Enzs
         rand_test_metabs = @LArray eps() .+ rand(length(init_cond)) propertynames(init_cond)
         rand_params = @LArray eps() .+ rand(length(params)) propertynames(params)
-        test_enzyme_rate = enzyme_rate(Enzyme(Enz...), init_cond, rand_params)
-        typeof(test_enzyme_rate) <: Real ||
+        test_rate = rate(Enzyme(Enz...), init_cond, rand_params)
+        typeof(test_rate) <: Real ||
             error("Enzyme $(Enz[1]) rate function should return a Real number.")
         substrate_names = Enz[2]
         product_names = Enz[3]
         # regulator_names = Enz[4]
 
-        # enzyme_rate is positive if one of products is absent and substrates are present
+        # rate is positive if one of products is absent and substrates are present
         for product in product_names
             test_metabs = deepcopy(rand_test_metabs)
             test_metabs[product] = 0.0
-            enzyme_rate(Enzyme(Enz...), test_metabs, rand_params) > 0.0 ||
+            rate(Enzyme(Enz...), test_metabs, rand_params) > 0.0 ||
                 error("Enzyme $(Enz[1]) rate should be positive when substrates are present and one product is missing.")
         end
 
-        # enzyme_rate is negative if one of substrates is absent and products are present
+        # rate is negative if one of substrates is absent and products are present
         for substrate in substrate_names
             test_metabs = deepcopy(rand_test_metabs)
             test_metabs[substrate] = 0.0
-            enzyme_rate(Enzyme(Enz...), test_metabs, rand_params) < 0.0 ||
+            rate(Enzyme(Enz...), test_metabs, rand_params) < 0.0 ||
                 error("Enzyme $(Enz[1]) rate should be negative when products are present and one substrate is missing.")
         end
 
-        # enzyme_rate is zero if all substrates and products are absent
+        # rate is zero if all substrates and products are absent
         empty_metabs = deepcopy(rand_test_metabs)
         for metab in [substrate_names..., product_names...]
             empty_metabs[metab] = 0.0
         end
-        enzyme_rate(Enzyme(Enz...), empty_metabs, rand_params) == 0.0 || error("Enzyme $(Enz[1]) rate should be zero when all substrates and products are absent.")
+        rate(Enzyme(Enz...), empty_metabs, rand_params) == 0.0 || error("Enzyme $(Enz[1]) rate should be zero when all substrates and products are absent.")
 
-        # enzyme_rate is zero when substrates and products are at equilibrium
+        # rate is zero when substrates and products are at equilibrium
         equilibrium_metabs = deepcopy(rand_test_metabs)
         if length(unique(product_names)) == length(product_names)
             equilibrium_metabs[product_names[1]] = rand_params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
@@ -152,8 +152,8 @@ function validate_enzyme_rates(
             equilibrium_metabs[product_names[1]] = sqrt(rand_params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
                                                reduce(*, [equilibrium_metabs[product] for product in product_names if product != product], init=1.0))
         end
-        isapprox(1.0 - enzyme_rate(Enzyme(Enz...), equilibrium_metabs, rand_params), 1.0) ||
-            error("Enzyme $(Enz[1]) rate = $(enzyme_rate(Enzyme(Enz...), equilibrium_metabs, rand_params)) when substrates and products are at equilibrium but should be zero.")
+        isapprox(1.0 - rate(Enzyme(Enz...), equilibrium_metabs, rand_params), 1.0) ||
+            error("Enzyme $(Enz[1]) rate = $(rate(Enzyme(Enz...), equilibrium_metabs, rand_params)) when substrates and products are at equilibrium but should be zero.")
     end
     return nothing
 end

@@ -56,10 +56,10 @@
         valid_params,
     )
 
-    # ------- Test: enzyme_rate() is defined and returns Real number -------
+    # ------- Test: rate() is defined and returns Real number -------
     # Test with a simple pathway
     simple_pathway = MetabolicPathway((:A_ext,), ((:SimpleEnz, (:A_ext,), (:B,)),))
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:SimpleEnz,(:A_ext,),(:B,)},
         metabs,
         params,
@@ -86,7 +86,7 @@
     # Test with a non-Real return type (String)
     simple_string_pathway =
         MetabolicPathway((:A_ext,), ((:SimpleEnzString, (:A_ext,), (:B,)),))
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:SimpleEnzString,(:A_ext,),(:B,)},
         metabs,
         params,
@@ -108,7 +108,7 @@
     # Test with a non-Real return type (Array)
     simple_array_pathway =
         MetabolicPathway((:A_ext,), ((:SimpleEnzArray, (:A_ext,), (:B,)),))
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:SimpleEnzArray,(:A_ext,),(:B,)},
         metabs,
         params,
@@ -130,7 +130,7 @@
     # Test with a non-Real return type (Nothing)
     simple_nothing_pathway =
         MetabolicPathway((:A_ext,), ((:SimpleEnzNothing, (:A_ext,), (:B,)),))
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:SimpleEnzNothing,(:A_ext,),(:B,)},
         metabs,
         params,
@@ -155,7 +155,7 @@
     missing_metabs = LVector(X = 1.0, Y = 0.5)
     missing_params = LVector(MissingFunc_Vmax = 1.0)
 
-    # Should throw an error when enzyme_rate function is not defined
+    # Should throw an error when rate function is not defined
     @test_throws Exception CellMetabolismBase.validate_enzyme_rates(
         missing_function_pathway,
         missing_metabs,
@@ -168,7 +168,7 @@
     always_negative_enz_pathway =
         MetabolicPathway((:S_ext,), ((:NegativeEnzyme, (:S_ext,), (:S,)),))
     # Define an enzyme rate that incorrectly returns negative value when products are absent
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:NegativeEnzyme,(:S_ext,),(:S,)},
         metabs,
         params,
@@ -189,7 +189,7 @@
     always_positive_enz_pathway =
         MetabolicPathway((:S_ext,), ((:PositiveEnzyme, (:S_ext,), (:S,)),))
     # Define an enzyme rate that incorrectly returns positive value when substrates are absent
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:PositiveEnzyme,(:S_ext,),(:S,)},
         metabs,
         params,
@@ -212,7 +212,7 @@
         ((:RegEnz, (:S,), (:P,), (:Act,), (:Inh,)),),
     )
 
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
         metabs,
         params,
@@ -224,8 +224,8 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
+        params,
         ::Val{:Act},
     )
         params = deepcopy(params)
@@ -234,8 +234,8 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
+        params,
         ::Val{:Inh},
     )
         params = deepcopy(params)
@@ -258,12 +258,12 @@
     )
 
     function CellMetabolismBase.remove_regulation(
-        params,
         enzyme::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
+        params,
     )
         params = deepcopy(params)
-        params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Act))
-        params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Inh))
+        params = CellMetabolismBase.remove_regulation(enzyme, params, Val(:Act))
+        params = CellMetabolismBase.remove_regulation(enzyme, params, Val(:Inh))
         return params
     end
 
@@ -278,7 +278,7 @@
         ((:FaultyEnz, (:S,), (:P,), (:Act,), ()),),
     )
 
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:FaultyEnz,(:S,),(:P,),(:Act,),()},
         metabs,
         params,
@@ -288,19 +288,19 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:FaultyEnz,(:S,),(:P,),(:Act,),()},
+        params,
         ::Val{:Act},
     )
         return deepcopy(params) # regulator is not actually removed
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         enzyme::Enzyme{:FaultyEnz,(:S,),(:P,),(:Act,),()},
+        params,
     )
         params = deepcopy(params)
-        params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Act))
+        params = CellMetabolismBase.remove_regulation(enzyme, params, Val(:Act))
         return params
     end
 
@@ -322,7 +322,7 @@
         ((:MissingSpecific, (:S,), (:P,), (:Act,), ()),),
     )
 
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:MissingSpecific,(:S,),(:P,),(:Act,),()},
         metabs,
         params,
@@ -333,8 +333,8 @@
     end
 
     function CellMetabolismBase.remove_regulation(
-        params,
         ::Enzyme{:MissingSpecific,(:S,),(:P,),(:Act,),()},
+        params,
     )
         params = deepcopy(params)
         setproperty!(params, :MissingSpecific_K_act, 0.0)
@@ -359,7 +359,7 @@
     never_zero_pathway = MetabolicPathway((:S_ext,), ((:NeverZeroEnz, (:S_ext,), (:S,)),))
 
     # Define an enzyme rate that incorrectly returns non-zero when all metabolites are absent
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:NeverZeroEnz,(:S_ext,),(:S,)},
         metabs,
         params,
@@ -383,7 +383,7 @@
     # Define a simple reversible enzyme for equilibrium testing
     non_eq_pathway = MetabolicPathway((:A_ext,), ((:NonEquilEnz, (:A_ext,), (:A,)),))
     # Define an enzyme rate that does not return zero at equilibrium
-    function CellMetabolismBase.enzyme_rate(
+    function CellMetabolismBase.rate(
         ::Enzyme{:NonEquilEnz,(:A_ext,),(:A,)},
         metabs,
         params,
