@@ -51,6 +51,8 @@ function validate_regulation_removal(
         append!(regulator_list, inhibitors(enzyme))
         isempty(regulator_list) && continue
 
+        overlap_mid_values = Dict{Symbol,Float64}()
+
         for reg in regulator_list
             hasproperty(init_cond, reg) ||
                 error("Regulator $(reg) for enzyme $(name(enzyme)) is missing from initial conditions; cannot validate remove_regulation.")
@@ -61,6 +63,31 @@ function validate_regulation_removal(
             test_metabs_low[reg] = 0.0
 
             test_params = @LArray eps() .+ rand(length(params)) propertynames(params)
+
+            is_overlap_inhibitor =
+                (reg in inhibitors(enzyme)) &&
+                ((reg in substrates(enzyme)) || (reg in products(enzyme)))
+            if is_overlap_inhibitor
+                overlap_mid_values[reg] = _validate_inhibitor_overlap(
+                    enzyme,
+                    reg,
+                    init_cond,
+                    params,
+                    test_params,
+                )
+                continue
+            end
+            if (reg in activators(enzyme)) &&
+               ((reg in substrates(enzyme)) || (reg in products(enzyme)))
+                overlap_mid_values[reg] = _validate_activator_overlap(
+                    enzyme,
+                    reg,
+                    init_cond,
+                    params,
+                    test_params,
+                )
+                continue
+            end
 
             specific_params = try
                 remove_regulation(enzyme, test_params, Val(reg))
@@ -81,8 +108,13 @@ function validate_regulation_removal(
         combined_metabs_high = @LArray eps() .+ rand(length(init_cond)) propertynames(init_cond)
         combined_metabs_low = deepcopy(combined_metabs_high)
         for reg in regulator_list
-            combined_metabs_high[reg] = 1.0 + rand()
-            combined_metabs_low[reg] = 0.0
+            if haskey(overlap_mid_values, reg)
+                combined_metabs_high[reg] = overlap_mid_values[reg]
+                combined_metabs_low[reg] = overlap_mid_values[reg]
+            else
+                combined_metabs_high[reg] = 1.0 + rand()
+                combined_metabs_low[reg] = 0.0
+            end
         end
         combined_params = @LArray eps() .+ rand(length(params)) propertynames(params)
 
@@ -102,6 +134,195 @@ function validate_regulation_removal(
     end
 
     return nothing
+end
+
+function _validate_inhibitor_overlap(
+    enzyme::Enzyme,
+    reg::Symbol,
+    init_cond,
+    params_reference,
+    params_trial,
+)
+    params_removed = try
+        remove_regulation(enzyme, deepcopy(params_trial), Val(reg))
+    catch err
+        error("remove_regulation($(name(enzyme)), params, Val($(reg))) failed during validation: $(err)")
+    end
+    _regulator_parameters_changed(params_trial, params_removed, reg) ||
+        error("remove_regulation($(name(enzyme)), params, Val($(reg))) did not modify parameters associated with regulator $(reg).")
+    _regulator_parameters_changed(params_trial, params_removed, reg) ||
+        error("remove_regulation($(name(enzyme)), params, Val($(reg))) did not modify parameters associated with regulator $(reg).")
+
+    mid_val = _regulator_mid_value(enzyme, params_reference, reg)
+    if !(mid_val isa Real && isfinite(mid_val) && mid_val > 0)
+        mid_val = 1.0
+    end
+    low_val = max(mid_val / 10, eps())
+    high_val = max(mid_val * 10, low_val + eps())
+
+    names = propertynames(init_cond)
+    low_data = fill(mid_val, length(init_cond))
+    mid_data = copy(low_data)
+    high_data = copy(low_data)
+    low_metabs = @LArray low_data names
+    mid_metabs = @LArray mid_data names
+    high_metabs = @LArray high_data names
+
+    subs = substrates(enzyme)
+    prods = products(enzyme)
+
+    if reg in subs
+        for product in prods
+            low_metabs[product] = 0.0
+            mid_metabs[product] = 0.0
+            high_metabs[product] = 0.0
+        end
+        for substrate in subs
+            if substrate == reg
+                low_metabs[substrate] = low_val
+                mid_metabs[substrate] = mid_val
+                high_metabs[substrate] = high_val
+            else
+                low_metabs[substrate] = mid_val
+                mid_metabs[substrate] = mid_val
+                high_metabs[substrate] = mid_val
+            end
+        end
+    else
+        for substrate in subs
+            low_metabs[substrate] = 0.0
+            mid_metabs[substrate] = 0.0
+            high_metabs[substrate] = 0.0
+        end
+        for product in prods
+            if product == reg
+                low_metabs[product] = low_val
+                mid_metabs[product] = mid_val
+                high_metabs[product] = high_val
+            else
+                low_metabs[product] = mid_val
+                mid_metabs[product] = mid_val
+                high_metabs[product] = mid_val
+            end
+        end
+    end
+
+    rate_low = rate(enzyme, low_metabs, params_removed)
+    rate_mid = rate(enzyme, mid_metabs, params_removed)
+    rate_high = rate(enzyme, high_metabs, params_removed)
+    all(isfinite, (rate_low, rate_mid, rate_high)) ||
+        error("remove_regulation($(name(enzyme)), params, Val($(reg))) produced non-finite rates during validation.")
+
+    tol = 1e-8 + 1e-6 * maximum(abs, (rate_low, rate_mid, rate_high))
+    if reg in subs
+        ((rate_low <= rate_mid + tol) && (rate_mid <= rate_high + tol)) ||
+            error("remove_regulation($(name(enzyme)), params, Val($(reg))) did not eliminate inhibitory behaviour for substrate regulator $(reg).")
+    else
+        ((rate_low + tol >= rate_mid) && (rate_mid + tol >= rate_high)) ||
+            error("remove_regulation($(name(enzyme)), params, Val($(reg))) did not eliminate inhibitory behaviour for product regulator $(reg).")
+    end
+
+    return mid_val
+end
+
+function _validate_activator_overlap(
+    enzyme::Enzyme,
+    reg::Symbol,
+    init_cond,
+    params_reference,
+    params_trial,
+)
+    params_removed = try
+        remove_regulation(enzyme, deepcopy(params_trial), Val(reg))
+    catch err
+        error("remove_regulation($(name(enzyme)), params, Val($(reg))) failed during validation: $(err)")
+    end
+
+    mid_val = _regulator_mid_value(enzyme, params_reference, reg)
+    if !(mid_val isa Real && isfinite(mid_val) && mid_val > 0)
+        mid_val = 1.0
+    end
+    low_val = max(mid_val / 10, eps())
+    high_val = max(mid_val * 10, low_val + eps())
+
+    names = propertynames(init_cond)
+    low_data = fill(mid_val, length(init_cond))
+    high_data = copy(low_data)
+    low_metabs = @LArray low_data names
+    high_metabs = @LArray high_data names
+
+    if reg in substrates(enzyme)
+        for substrate in substrates(enzyme)
+            if substrate == reg
+                low_metabs[substrate] = low_val
+                high_metabs[substrate] = high_val
+            else
+                low_metabs[substrate] = 0.0
+                high_metabs[substrate] = 0.0
+            end
+        end
+        for product in products(enzyme)
+            low_metabs[product] = mid_val
+            high_metabs[product] = mid_val
+        end
+    else
+        for product in products(enzyme)
+            if product == reg
+                low_metabs[product] = low_val
+                high_metabs[product] = high_val
+            else
+                low_metabs[product] = 0.0
+                high_metabs[product] = 0.0
+            end
+        end
+        for substrate in substrates(enzyme)
+            low_metabs[substrate] = mid_val
+            high_metabs[substrate] = mid_val
+        end
+    end
+
+    rate_low_with = rate(enzyme, low_metabs, params_trial)
+    rate_high_with = rate(enzyme, high_metabs, params_trial)
+    all(isfinite, (rate_low_with, rate_high_with)) ||
+        error("Rate evaluation for $(name(enzyme)) with activator $(reg) produced non-finite values during validation.")
+
+    rate_low_removed = rate(enzyme, low_metabs, params_removed)
+    rate_high_removed = rate(enzyme, high_metabs, params_removed)
+    all(isfinite, (rate_low_removed, rate_high_removed)) ||
+        error("remove_regulation($(name(enzyme)), params, Val($(reg))) produced non-finite rates during validation.")
+
+    return mid_val
+end
+
+function _regulator_mid_value(enzyme::Enzyme, params, reg::Symbol)
+    prefix = string(name(enzyme), "_K_")
+    target = lowercase(String(reg))
+    values = Float64[]
+    for sym in propertynames(params)
+        str = String(sym)
+        startswith(str, prefix) || continue
+        occursin(target, lowercase(str)) || continue
+        val = params[sym]
+        val isa Real || continue
+        val > 0 || continue
+        push!(values, float(val))
+    end
+    isempty(values) && return 1.0
+    return exp(sum(log, values) / length(values))
+end
+
+function _regulator_parameters_changed(before, after, reg::Symbol)
+    target = lowercase(String(reg))
+    for sym in propertynames(before)
+        hasproperty(after, sym) || continue
+        occursin(target, lowercase(String(sym))) || continue
+        before_val = before[sym]
+        after_val = after[sym]
+        if !(isequal(before_val, after_val) || (before_val isa Real && after_val isa Real && isapprox(before_val, after_val; atol=1e-12, rtol=1e-8)))
+            return true
+        end
+    end
+    return false
 end
 
 function validate_enzyme_rates(
