@@ -182,3 +182,67 @@
 
     @test_throws ErrorException enzyme_rate(Enzyme(:Random, (:X,), (:Y,)), 1.0, 2.0)
 end
+
+@testitem "remove_regulation throws error for undefined enzyme" begin
+    using CellMetabolismBase
+    using LabelledArrays
+
+    enzyme = CellMetabolismBase.Enzyme(:Demo, (:S,), (:P,), (:Act1, :Act2), (:Inh1,))
+    params = LVector(
+        Demo_K_a_Act1 = 1.0,
+        Demo_K_a_Act2 = 1.5,
+        Demo_K_i_Inh1 = 2.0,
+        Demo_L = 3.0,
+        Demo_Vmax = 5.0,
+    )
+
+    @test_throws ErrorException CellMetabolismBase.remove_regulation(params, enzyme)
+    @test_throws ErrorException CellMetabolismBase.remove_regulation(params, enzyme, Val(:Act1))
+end
+
+@testitem "remove_regulation user extension example" begin
+    using CellMetabolismBase
+    using LabelledArrays
+
+    enzyme = CellMetabolismBase.Enzyme(:Custom, (:S,), (:P,), (:Act,), ())
+    params = LVector(
+        Custom_K_a_Act = 2.0,
+        Custom_L = 4.0,
+        Custom_bias = 10.0,
+    )
+
+    # User extends the function for specific regulator
+    function CellMetabolismBase.remove_regulation(
+        params,
+        enzyme::CellMetabolismBase.Enzyme{:Custom,(:S,),(:P,),(:Act,),()},
+        ::Val{:Act},
+    )
+        params = deepcopy(params)
+        setproperty!(params, :Custom_K_a_Act, Inf)
+        params.Custom_bias = 0.0
+        return params
+    end
+
+    # User extends the function for removing all regulation
+    function CellMetabolismBase.remove_regulation(
+        params,
+        enzyme::CellMetabolismBase.Enzyme{:Custom,(:S,),(:P,),(:Act,),()},
+    )
+        params = deepcopy(params)
+        setproperty!(params, :Custom_L, 0.0)
+        params = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Act))
+        return params
+    end
+
+    # Test single regulator removal
+    act_removed = CellMetabolismBase.remove_regulation(params, enzyme, Val(:Act))
+    @test isinf(act_removed.Custom_K_a_Act)
+    @test act_removed.Custom_L == params.Custom_L
+    @test act_removed.Custom_bias == 0.0
+
+    # Test all regulation removal
+    neutral_params = CellMetabolismBase.remove_regulation(params, enzyme)
+    @test isinf(neutral_params.Custom_K_a_Act)
+    @test neutral_params.Custom_L == 0.0
+    @test neutral_params.Custom_bias == 0.0
+end

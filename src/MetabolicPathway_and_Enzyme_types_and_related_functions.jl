@@ -113,6 +113,26 @@ missing rate equations.
 enzyme_rate(enzyme::Enzyme, metabs, params) = error("rate function not defined for enzyme: $enzyme")
 
 """
+    remove_regulation(params, enzyme::Enzyme)
+
+Fallback method for removing all regulation from an enzyme. Packages depending on `CellMetabolismBase`
+should extend this function for relevant enzyme variants. The default implementation throws an error
+to highlight missing implementations.
+"""
+remove_regulation(params, enzyme::Enzyme) =
+    error("remove_regulation not defined for enzyme: $enzyme")
+
+"""
+    remove_regulation(params, enzyme::Enzyme, ::Val{regulator})
+
+Fallback method for removing specific regulator from an enzyme. Packages depending on `CellMetabolismBase`
+should extend this function for relevant enzyme-regulator combinations. The default implementation throws
+an error to highlight missing implementations.
+"""
+remove_regulation(params, enzyme::Enzyme, ::Val{Reg}) where {Reg} =
+    error("remove_regulation not defined for enzyme: $enzyme, regulator: $Reg")
+
+"""
     enzyme_name(enzyme::Enzyme)
 
 Return `Symbol` of enzyme name.

@@ -17,6 +17,9 @@ export validate_MetabolicPathway
 #Functions to calculate value for ODE solutions
 export enzyme_rate
 export enzyme_rates
+
+#Helpers functions
+export remove_regulation
 export disequilibrium_ratio
 export disequilibrium_ratios
 
