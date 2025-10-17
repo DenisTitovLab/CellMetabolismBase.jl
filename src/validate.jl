@@ -1,7 +1,7 @@
 using LabelledArrays
 
 """
-    validate_MetabolicPathway(metabolic_pathway::MetabolicPathway, init_cond::LArray, params::LArray)
+    validate(metabolic_pathway::MetabolicPathway, init_cond::LArray, params::LArray)
 
 Perform structural checks on a metabolic pathway definition, ensuring metabolites present in the
 pathway exist in the labelled initial conditions and that all enzyme rate functions behave
@@ -9,7 +9,7 @@ consistently across basic scenarios, like `rate` being positive when substrates 
 and products are absent, negative when products are present and substrates are absent, and zero
 when all substrates and products are absent or at equilibrium.
 """
-function validate_MetabolicPathway(
+function validate(
     metabolic_pathway::MetabolicPathway,
     init_cond::LArray{T1,1,Vector{T1},MetabNames},
     params::LArray{T2,1,Vector{T2},ParamNames},

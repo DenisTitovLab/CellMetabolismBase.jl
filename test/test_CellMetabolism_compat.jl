@@ -6,7 +6,7 @@
 #     init = deepcopy(CellMetabolism.glycolysis_init_conc)
 #     params = deepcopy(CellMetabolism.glycolysis_params)
 
-#     @test isnothing(CellMetabolismBase.validate_MetabolicPathway(pathway, init, params))
+#     @test isnothing(CellMetabolismBase.validate(pathway, init, params))
 # end
 
 # @testitem "CellMetabolism glycolysis make_ODEProblem" begin
