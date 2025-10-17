@@ -106,6 +106,55 @@ fig
 
 <img src="./assets/readme_metabolic_pathway_sim_results.png" width="600">
 
+## Removing Regulation
+
+CellMetabolismBase provides placeholder `remove_regulation` functions that downstream packages extend to disable enzyme regulation. Users implement these methods to neutralize regulation by setting affinity constants to `Inf` and the allosteric `L` parameter to `0`.
+
+```julia
+using CellMetabolismBase, LabelledArrays
+
+hk1 = Enzyme(:HK1, (:Glucose, :ATP), (:G6P, :ADP), (:Phosphate,), (:G6P,))
+params = LVector(
+    HK1_K_a_Pi = 4.6e-4,
+    HK1_K_i_G6P_reg = 6.9e-6,
+    HK1_L = 3.0,
+    HK1_Vmax = 53.0,
+)
+
+# Extend remove_regulation for specific regulator
+function CellMetabolismBase.remove_regulation(
+    params,
+    enzyme::Enzyme{:HK1,(:Glucose, :ATP),(:G6P, :ADP),(:Phosphate,),(:G6P,)},
+    ::Val{:Phosphate},
+)
+    params = deepcopy(params)
+    setproperty!(params, :HK1_K_a_Pi, Inf)
+    return params
+end
+
+# Extend remove_regulation to remove all regulation
+function CellMetabolismBase.remove_regulation(
+    params,
+    enzyme::Enzyme{:HK1,(:Glucose, :ATP),(:G6P, :ADP),(:Phosphate,),(:G6P,)},
+)
+    params = deepcopy(params)
+    setproperty!(params, :HK1_L, 0.0)
+    # Remove all regulators
+    params = remove_regulation(params, enzyme, Val(:Phosphate))
+    params = remove_regulation(params, enzyme, Val(:G6P))
+    return params
+end
+
+# Now you can use the functions
+no_pi = remove_regulation(params, hk1, Val(:Phosphate))
+@assert isinf(no_pi.HK1_K_a_Pi)
+@assert no_pi.HK1_K_i_G6P_reg == params.HK1_K_i_G6P_reg
+
+no_reg = remove_regulation(params, hk1)
+@assert isinf(no_reg.HK1_K_a_Pi)
+@assert no_reg.HK1_L == 0.0
+```
+
 ## Ensemble Simulations
 
 Ensemble simulations allow you to explore parameter or initial condition variations:
