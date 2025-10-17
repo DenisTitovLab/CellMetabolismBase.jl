@@ -1,4 +1,4 @@
-@testitem "MetabolicPathway Validation Tests" setup=[TestMetabolicPathway] begin
+@testitem "MetabolicPathway Validation Tests" setup = [TestMetabolicPathway] begin
     using LabelledArrays, BenchmarkTools, OrdinaryDiffEqFIRK
 
     # Define a common test pathway with different enzyme types
@@ -27,11 +27,7 @@
 
     # ------- Test: Full validation with standard pathway -------
     # Test that the overall validation function works
-    @test_nowarn CellMetabolismBase.validate_MetabolicPathway(
-        test_pathway,
-        valid_metabs,
-        valid_params,
-    )
+    @test_nowarn CellMetabolismBase.validate(test_pathway, valid_metabs, valid_params)
     # Test the enzyme validation function works
     @test_nowarn CellMetabolismBase.validate_enzyme_rates(
         test_pathway,
@@ -42,7 +38,7 @@
     # ------- Test: Check metabolites found in initial conditions -------
     # Test 1: Missing metabolite - should fail
     missing_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0) # Missing C and D
-    @test_throws ErrorException CellMetabolismBase.validate_MetabolicPathway(
+    @test_throws ErrorException CellMetabolismBase.validate(
         test_pathway,
         missing_metabs,
         valid_params,
@@ -50,20 +46,12 @@
 
     # Test 2: Extra metabolite - should pass
     extra_metabs = LVector(A_media = 2.0, A = 1.0, B = 1.0, C = 1.0, D = 1.0, E = 0.5) # Extra E
-    @test_nowarn CellMetabolismBase.validate_MetabolicPathway(
-        test_pathway,
-        extra_metabs,
-        valid_params,
-    )
+    @test_nowarn CellMetabolismBase.validate(test_pathway, extra_metabs, valid_params)
 
     # ------- Test: rate() is defined and returns Real number -------
     # Test with a simple pathway
     simple_pathway = MetabolicPathway((:A_ext,), ((:SimpleEnz, (:A_ext,), (:B,)),))
-    function CellMetabolismBase.rate(
-        ::Enzyme{:SimpleEnz,(:A_ext,),(:B,)},
-        metabs,
-        params,
-    )
+    function CellMetabolismBase.rate(::Enzyme{:SimpleEnz,(:A_ext,),(:B,)}, metabs, params)
         return params.SimpleEnz_Vmax * (metabs.A_ext - metabs.B / params.SimpleEnz_Keq) / (
             params.SimpleEnz_Km *
             (1 + metabs.A_ext / params.SimpleEnz_Km + metabs.B / params.SimpleEnz_Ki)
@@ -207,10 +195,7 @@
     )
 
     # ------- Test: Regulation removal validation -------
-    regulated_pathway = MetabolicPathway(
-        (),
-        ((:RegEnz, (:S,), (:P,), (:Act,), (:Inh,)),),
-    )
+    regulated_pathway = MetabolicPathway((), ((:RegEnz, (:S,), (:P,), (:Act,), (:Inh,)),))
 
     function CellMetabolismBase.rate(
         ::Enzyme{:RegEnz,(:S,),(:P,),(:Act,),(:Inh,)},
@@ -244,12 +229,8 @@
     end
 
     regulated_metabs = LVector(S = 1.0, P = 0.2, Act = 0.4, Inh = 0.3)
-    regulated_params = LVector(
-        RegEnz_Vmax = 2.0,
-        RegEnz_Keq = 5.0,
-        RegEnz_K_act = 1.2,
-        RegEnz_K_inh = 0.8,
-    )
+    regulated_params =
+        LVector(RegEnz_Vmax = 2.0, RegEnz_Keq = 5.0, RegEnz_K_act = 1.2, RegEnz_K_inh = 0.8)
 
     @test_throws ErrorException CellMetabolismBase.validate_regulation_removal(
         regulated_pathway,
@@ -267,23 +248,21 @@
         return params
     end
 
-    @test_nowarn CellMetabolismBase.validate_MetabolicPathway(
+    @test_nowarn CellMetabolismBase.validate(
         regulated_pathway,
         regulated_metabs,
         regulated_params,
     )
 
-    faulty_pathway = MetabolicPathway(
-        (),
-        ((:FaultyEnz, (:S,), (:P,), (:Act,), ()),),
-    )
+    faulty_pathway = MetabolicPathway((), ((:FaultyEnz, (:S,), (:P,), (:Act,), ()),))
 
     function CellMetabolismBase.rate(
         ::Enzyme{:FaultyEnz,(:S,),(:P,),(:Act,),()},
         metabs,
         params,
     )
-        return params.FaultyEnz_Vmax * (1 + params.FaultyEnz_K_act * metabs.Act) *
+        return params.FaultyEnz_Vmax *
+               (1 + params.FaultyEnz_K_act * metabs.Act) *
                (metabs.S - metabs.P / params.FaultyEnz_Keq)
     end
 
@@ -305,22 +284,17 @@
     end
 
     faulty_metabs = LVector(S = 1.0, P = 0.2, Act = 0.5)
-    faulty_params = LVector(
-        FaultyEnz_Vmax = 1.5,
-        FaultyEnz_Keq = 3.0,
-        FaultyEnz_K_act = 0.7,
-    )
+    faulty_params =
+        LVector(FaultyEnz_Vmax = 1.5, FaultyEnz_Keq = 3.0, FaultyEnz_K_act = 0.7)
 
-    @test_throws ErrorException CellMetabolismBase.validate_MetabolicPathway(
+    @test_throws ErrorException CellMetabolismBase.validate(
         faulty_pathway,
         faulty_metabs,
         faulty_params,
     )
 
-    missing_specific_pathway = MetabolicPathway(
-        (),
-        ((:MissingSpecific, (:S,), (:P,), (:Act,), ()),),
-    )
+    missing_specific_pathway =
+        MetabolicPathway((), ((:MissingSpecific, (:S,), (:P,), (:Act,), ()),))
 
     function CellMetabolismBase.rate(
         ::Enzyme{:MissingSpecific,(:S,),(:P,),(:Act,),()},
@@ -348,10 +322,243 @@
         MissingSpecific_K_act = 1.1,
     )
 
-    @test_throws ErrorException CellMetabolismBase.validate_MetabolicPathway(
+    @test_throws ErrorException CellMetabolismBase.validate(
         missing_specific_pathway,
         missing_specific_metabs,
         missing_specific_params,
+    )
+
+    # ------- Test: inhibitor is also a substrate -------
+    substrate_inhibitor_pathway =
+        MetabolicPathway((), ((:SubInhibEnz, (:S,), (:P,), (), (:S,)),))
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:SubInhibEnz,(:S,),(:P,),(),(:S,)},
+        metabs,
+        params,
+    )
+        driving = params.SubInhibEnz_Vmax * (metabs.S - metabs.P / params.SubInhibEnz_Keq)
+        binding = 1 / (1 + metabs.S / params.SubInhibEnz_K_S)
+        inhibition = 1 / (1 + metabs.S / params.SubInhibEnz_K_S_inh)
+        return driving * binding * inhibition
+    end
+
+    substrate_inhibitor_metabs = LVector(S = 0.5, P = 0.0)
+    substrate_inhibitor_params = LVector(
+        SubInhibEnz_Vmax = 1.0,
+        SubInhibEnz_Keq = 5.0,
+        SubInhibEnz_K_S = 0.3,
+        SubInhibEnz_K_S_inh = 0.2,
+    )
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:SubInhibEnz,(:S,),(:P,),(),(:S,)},
+        params,
+        ::Val{:S},
+    )
+        return deepcopy(params)
+    end
+
+    @test_throws ErrorException CellMetabolismBase.validate(
+        substrate_inhibitor_pathway,
+        substrate_inhibitor_metabs,
+        substrate_inhibitor_params,
+    )
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:SubInhibEnz,(:S,),(:P,),(),(:S,)},
+        params,
+        ::Val{:S},
+    )
+        params = deepcopy(params)
+        setproperty!(params, :SubInhibEnz_K_S_inh, Inf)
+        return params
+    end
+
+    function CellMetabolismBase.remove_regulation(
+        enzyme::Enzyme{:SubInhibEnz,(:S,),(:P,),(),(:S,)},
+        params,
+    )
+        return CellMetabolismBase.remove_regulation(enzyme, deepcopy(params), Val(:S))
+    end
+
+    @test_nowarn CellMetabolismBase.validate(
+        substrate_inhibitor_pathway,
+        substrate_inhibitor_metabs,
+        substrate_inhibitor_params,
+    )
+
+    # ------- Test: inhibitor is also a product -------
+    product_inhibitor_pathway =
+        MetabolicPathway((), ((:ProdInhibEnz, (:S,), (:P,), (), (:P,)),))
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:ProdInhibEnz,(:S,),(:P,),(),(:P,)},
+        metabs,
+        params,
+    )
+        driving = params.ProdInhibEnz_Vmax * (metabs.S - metabs.P / params.ProdInhibEnz_Keq)
+        binding =
+            1 /
+            (1 + metabs.S / params.ProdInhibEnz_K_S + metabs.P / params.ProdInhibEnz_K_P)
+        inhibition = 1 / (1 + metabs.P / params.ProdInhibEnz_K_P_inh)
+        return driving * binding * inhibition
+    end
+
+    product_inhibitor_metabs = LVector(S = 1.0, P = 0.5)
+    product_inhibitor_params = LVector(
+        ProdInhibEnz_Vmax = 1.0,
+        ProdInhibEnz_Keq = 2.0,
+        ProdInhibEnz_K_S = 0.4,
+        ProdInhibEnz_K_P = 0.6,
+        ProdInhibEnz_K_P_inh = 0.3,
+    )
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:ProdInhibEnz,(:S,),(:P,),(),(:P,)},
+        params,
+        ::Val{:P},
+    )
+        return deepcopy(params)
+    end
+
+    @test_throws ErrorException CellMetabolismBase.validate(
+        product_inhibitor_pathway,
+        product_inhibitor_metabs,
+        product_inhibitor_params,
+    )
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:ProdInhibEnz,(:S,),(:P,),(),(:P,)},
+        params,
+        ::Val{:P},
+    )
+        params = deepcopy(params)
+        setproperty!(params, :ProdInhibEnz_K_P_inh, Inf)
+        return params
+    end
+
+    function CellMetabolismBase.remove_regulation(
+        enzyme::Enzyme{:ProdInhibEnz,(:S,),(:P,),(),(:P,)},
+        params,
+    )
+        return CellMetabolismBase.remove_regulation(enzyme, deepcopy(params), Val(:P))
+    end
+
+    @test_nowarn CellMetabolismBase.validate(
+        product_inhibitor_pathway,
+        product_inhibitor_metabs,
+        product_inhibitor_params,
+    )
+
+    # ------- Test: activator is also a substrate -------
+    substrate_activator_pathway =
+        MetabolicPathway((), ((:SubActEnz, (:S,), (:P,), (:S,), ()),))
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:SubActEnz,(:S,),(:P,),(:S,),()},
+        metabs,
+        params,
+    )
+        driving = params.SubActEnz_Vmax * (metabs.S - metabs.P / params.SubActEnz_Keq)
+        activation = 1 + params.SubActEnz_K_act * metabs.S
+        return driving * activation
+    end
+
+    substrate_activator_metabs = LVector(S = 0.4, P = 1.2)
+    substrate_activator_params =
+        LVector(SubActEnz_Vmax = 1.0, SubActEnz_Keq = 0.2, SubActEnz_K_act = 2.0)
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:SubActEnz,(:S,),(:P,),(:S,),()},
+        params,
+        ::Val{:S},
+    )
+        return deepcopy(params)
+    end
+
+    @test_throws ErrorException CellMetabolismBase.validate(
+        substrate_activator_pathway,
+        substrate_activator_metabs,
+        substrate_activator_params,
+    )
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:SubActEnz,(:S,),(:P,),(:S,),()},
+        params,
+        ::Val{:S},
+    )
+        params = deepcopy(params)
+        setproperty!(params, :SubActEnz_K_act, 0.0)
+        return params
+    end
+
+    function CellMetabolismBase.remove_regulation(
+        enzyme::Enzyme{:SubActEnz,(:S,),(:P,),(:S,),()},
+        params,
+    )
+        return CellMetabolismBase.remove_regulation(enzyme, deepcopy(params), Val(:S))
+    end
+
+    @test_nowarn CellMetabolismBase.validate(
+        substrate_activator_pathway,
+        substrate_activator_metabs,
+        substrate_activator_params,
+    )
+
+    # ------- Test: activator is also a product -------
+    product_activator_pathway =
+        MetabolicPathway((), ((:ProdActEnz, (:S,), (:P,), (:P,), ()),))
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:ProdActEnz,(:S,),(:P,),(:P,),()},
+        metabs,
+        params,
+    )
+        driving = params.ProdActEnz_Vmax * (metabs.S - metabs.P / params.ProdActEnz_Keq)
+        activation = 1 + params.ProdActEnz_K_act * metabs.P
+        return driving * activation
+    end
+
+    product_activator_metabs = LVector(S = 1.0, P = 0.2)
+    product_activator_params =
+        LVector(ProdActEnz_Vmax = 1.2, ProdActEnz_Keq = 5.0, ProdActEnz_K_act = 3.0)
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:ProdActEnz,(:S,),(:P,),(:P,),()},
+        params,
+        ::Val{:P},
+    )
+        return deepcopy(params)
+    end
+
+    @test_throws ErrorException CellMetabolismBase.validate(
+        product_activator_pathway,
+        product_activator_metabs,
+        product_activator_params,
+    )
+
+    function CellMetabolismBase.remove_regulation(
+        ::Enzyme{:ProdActEnz,(:S,),(:P,),(:P,),()},
+        params,
+        ::Val{:P},
+    )
+        params = deepcopy(params)
+        setproperty!(params, :ProdActEnz_K_act, 0.0)
+        return params
+    end
+
+    function CellMetabolismBase.remove_regulation(
+        enzyme::Enzyme{:ProdActEnz,(:S,),(:P,),(:P,),()},
+        params,
+    )
+        return CellMetabolismBase.remove_regulation(enzyme, deepcopy(params), Val(:P))
+    end
+
+    @test_nowarn CellMetabolismBase.validate(
+        product_activator_pathway,
+        product_activator_metabs,
+        product_activator_params,
     )
 
     # ------- Test: Enzyme rate is zero when all substrates and products absent -------
@@ -383,11 +590,7 @@
     # Define a simple reversible enzyme for equilibrium testing
     non_eq_pathway = MetabolicPathway((:A_ext,), ((:NonEquilEnz, (:A_ext,), (:A,)),))
     # Define an enzyme rate that does not return zero at equilibrium
-    function CellMetabolismBase.rate(
-        ::Enzyme{:NonEquilEnz,(:A_ext,),(:A,)},
-        metabs,
-        params,
-    )
+    function CellMetabolismBase.rate(::Enzyme{:NonEquilEnz,(:A_ext,),(:A,)}, metabs, params)
         return params.NonEquilEnz_Vmax *
                (metabs.A_ext - 1.001 * metabs.A / params.NonEquilEnz_Keq) / (
             params.NonEquilEnz_Km *
