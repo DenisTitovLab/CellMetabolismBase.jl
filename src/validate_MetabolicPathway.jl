@@ -35,6 +35,78 @@ function validate_MetabolicPathway(
     #validate enzyme_rate equations
     validate_enzyme_rates(metabolic_pathway, init_cond, params)
 
+    #validate regulation removal behaviour when regulators are present
+    validate_regulation_removal(metabolic_pathway, init_cond, params)
+
+    return nothing
+end
+
+function validate_regulation_removal(
+    metabolic_pathway::MetabolicPathway{ConstMetabs,Enzs},
+    init_cond::LArray{T1,1,Vector{T1},MetabNames},
+    params::LArray{T2,1,Vector{T2},ParamNames},
+) where {ConstMetabs,Enzs,T1<:Real,T2<:Real,MetabNames,ParamNames}
+    isempty(Enzs) && return nothing
+
+    for Enz in Enzs
+        length(Enz) < 5 && continue  # no regulators recorded
+        regulator_list = Symbol[]
+        append!(regulator_list, Enz[4])
+        append!(regulator_list, Enz[5])
+        isempty(regulator_list) && continue
+
+        enzyme = Enzyme(Enz...)
+
+        for reg in regulator_list
+            hasproperty(init_cond, reg) ||
+                error("Regulator $(reg) for enzyme $(Enz[1]) is missing from initial conditions; cannot validate remove_regulation.")
+
+            test_metabs_high = @LArray eps() .+ rand(length(init_cond)) propertynames(init_cond)
+            test_metabs_low = deepcopy(test_metabs_high)
+            test_metabs_high[reg] = 1.0 + rand()
+            test_metabs_low[reg] = 0.0
+
+            test_params = @LArray eps() .+ rand(length(params)) propertynames(params)
+
+            specific_params = try
+                remove_regulation(test_params, enzyme, Val(reg))
+            catch err
+                error("remove_regulation(params, $(Enz[1]), Val($(reg))) failed during validation: $(err)")
+            end
+
+            rate_high = enzyme_rate(enzyme, test_metabs_high, specific_params)
+            rate_low = enzyme_rate(enzyme, test_metabs_low, specific_params)
+            (isfinite(rate_high) && isfinite(rate_low)) ||
+                error("remove_regulation for enzyme $(Enz[1]) and regulator $(reg) produced non-finite rates during validation.")
+
+            isapprox(rate_high, rate_low; atol=1e-8, rtol=1e-6) ||
+                error("remove_regulation(params, $(Enz[1]), Val($(reg))) did not eliminate dependence on regulator $(reg).")
+        end
+
+        # Validate combined regulator removal
+        combined_metabs_high = @LArray eps() .+ rand(length(init_cond)) propertynames(init_cond)
+        combined_metabs_low = deepcopy(combined_metabs_high)
+        for reg in regulator_list
+            combined_metabs_high[reg] = 1.0 + rand()
+            combined_metabs_low[reg] = 0.0
+        end
+        combined_params = @LArray eps() .+ rand(length(params)) propertynames(params)
+
+        all_removed_params = try
+            remove_regulation(combined_params, enzyme)
+        catch err
+            error("remove_regulation(params, $(Enz[1])) failed during validation: $(err)")
+        end
+
+        rate_high_all = enzyme_rate(enzyme, combined_metabs_high, all_removed_params)
+        rate_low_all = enzyme_rate(enzyme, combined_metabs_low, all_removed_params)
+        (isfinite(rate_high_all) && isfinite(rate_low_all)) ||
+            error("remove_regulation(params, $(Enz[1])) produced non-finite rates during validation.")
+
+        isapprox(rate_high_all, rate_low_all; atol=1e-8, rtol=1e-6) ||
+            error("remove_regulation(params, $(Enz[1])) did not eliminate dependence on its regulators $(Tuple(regulator_list)).")
+    end
+
     return nothing
 end
 
