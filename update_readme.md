@@ -70,7 +70,7 @@ sol = solve(prob, Tsit5(); saveat = range(tspan...; length = 300))
 states = sol.u
 rates_over_time = [rates(pathway, state, params) for state in states]
 ratio_over_time = [disequilibrium_ratios(pathway, state, params) for state in states]
-enzyme_labels = map(name, enzymes(pathway))
+enzyme_labels = enzymes(pathway)
 
 fig = Figure(resolution = (960, 320))
 colors = Makie.wong_colors()
