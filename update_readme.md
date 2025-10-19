@@ -72,7 +72,7 @@ rates_over_time = [rates(pathway, state, params) for state in states]
 ratio_over_time = [disequilibrium_ratios(pathway, state, params) for state in states]
 enzyme_labels = enzymes(pathway)
 
-fig = Figure(resolution = (960, 320))
+fig = Figure(size = (960, 320))
 colors = Makie.wong_colors()
 
 ax_states = Axis(fig[1, 1], title = "Metabolites", xlabel = "time", ylabel = "concentration")
