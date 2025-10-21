@@ -11,7 +11,7 @@ CellMetabolismBase rewrites enzyme rate equations into ordinary differential equ
 
 - Automatically convert enzyme `rate()` equations into `ODEProblem` and `EnsembleProblem` that can be simulated using [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl)
 - `validate()` that the pathway and rate equations are correctly defined
-- `remove_regulation()` of a specific enzyme by specific allosteric regulator to facilitate the investigation of allosteric regulation in metabolic pathways
+- `remove_regulation()` of an enzyme by a regulator to facilitate the investigation of allosteric regulation in metabolic pathways
 - Helper functions to calculate enzyme `rates()` and `disequilibrium_ratios()`
 
 ## Quickstart: Define -> Simulate -> Analyze
@@ -193,11 +193,11 @@ effective comparison for reports or teaching material.
 
 ## Roadmap
 
-- Validate `MetabolicPathway` definitions by checking rate equations, conserved moieties, and atom balance.
-- Add Global Sensitivity Analysis helpers to surface leverage points across enzyme parameters.
-- Extend support for isotope tracing and other multi-compartment workflows.
-- Introduce unit-aware parameters and initial conditions to ensure dimensional consistency.
+- Introduce unit-aware parameters and initial conditions to ensure dimensional consistency
+- Add Global Sensitivity Analysis functionality to identify key parameters influencing pathway behavior
+- Implement ability to write down isotope tracing ODE models
+- Implement atom conservation validation to catch errors in metabolic pathway definitions
 
 ## CellMetabolismBase vs Catalyst.jl
 
-[Catalyst.jl](https://catalyst.sciml.ai/stable/) is the mature package with many features for analysis and simulation of chemical reaction networks in Julia and you should use it instead of CellMetabolismBase for most applications. The idea behind CellMetabolismBase is to have a lightweight package with small number of dependencies that simply converts a collection of enzyme rate equations into a metabolic pathway that can be simulated with [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) and provides utilities that makes it easier to construct and analyze large scale metabolic pathways, such an api to remove regulation or validation tools that catch errors in the pathway construction and enzyme rate equations. CellMetabolismBase is designed to be extended by other packages such as [CellMetabolism.jl](https://github.com/DenisTitovLab/CellMetabolism.jl) to enable simulation of large cellular metabolism models with custom rate equations and regulation patterns.
+[Catalyst.jl](https://catalyst.sciml.ai/stable/) is the mature package with many features for analysis and simulation of chemical reaction networks in [Julia Programming Language](https://julialang.org) and you should use it instead of CellMetabolismBase for most applications. The specific focus of CellMetabolismBase is to facilitate the investigation of control of metabolic pathways by allosteric regulators while [Catalyst.jl](https://catalyst.sciml.ai/stable/) is a more general framework for chemical reaction network modeling. The goal behind CellMetabolismBase is to have a lightweight package with small number of dependencies that converts a collection of enzyme rate equations into a metabolic pathway that can be simulated with [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) and provides utilities that ensure that many typos in enzyme rate equations and pathway formulation are caught early.  CellMetabolismBase is designed to be extended by other packages such as [CellMetabolism.jl](https://github.com/DenisTitovLab/CellMetabolism.jl) to enable simulation of large cellular metabolism models with custom rate equations and regulation patterns.
