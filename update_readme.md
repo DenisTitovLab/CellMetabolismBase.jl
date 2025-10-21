@@ -193,10 +193,10 @@ effective comparison for reports or teaching material.
 
 ## Roadmap
 
-- Introduce unit-aware parameters and initial conditions to ensure dimensional consistency
+- Introduce unit-aware parameters and initial conditions to ensure unit consistency
 - Add Global Sensitivity Analysis functionality to identify key parameters influencing pathway behavior
 - Implement ability to write down isotope tracing ODE models
-- Implement atom conservation validation to catch errors in metabolic pathway definitions
+- Implement atom conservation validation to catch errors in metabolic reaction formulation
 
 ## CellMetabolismBase vs Catalyst.jl
 
