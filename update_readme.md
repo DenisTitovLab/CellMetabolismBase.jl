@@ -5,7 +5,7 @@
 [![JET](https://img.shields.io/badge/%F0%9F%9B%A9%EF%B8%8F_tested_with-JET.jl-233f9a)](https://github.com/aviatesk/JET.jl)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-CellMetabolismBase rewrites enzyme rate equations into ordinary differential equation (ODE) models that can be used to simulate the activity of metabolic pathways under various conditions in the presence and absence of allosteric regulation. The ODE models are numerically simulated using the [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) library solvers in [Julia Programming Language](https://julialang.org). CellMetabolismBase package powers [CellMetabolism.jl](https://github.com/DenisTitovLab/CellMetabolism.jl) that extends CellMetabolismBase with human enzyme rate equations to enable the simulation of human cell metabolism.
+CellMetabolismBase rewrites enzyme rate equations into a system of ordinary differential equations (ODEs) that simulate the activity of metabolic pathways under various conditions in the presence and absence of allosteric regulation. The ODEs are numerically simulated using the [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) library solvers in [Julia Programming Language](https://julialang.org). CellMetabolismBase package powers [CellMetabolism.jl](https://github.com/DenisTitovLab/CellMetabolism.jl) that extends CellMetabolismBase with human enzyme rate equations to enable the simulation of human cell metabolism.
 
 ## Feature Highlights
 
@@ -16,13 +16,16 @@ CellMetabolismBase rewrites enzyme rate equations into ordinary differential equ
 
 ## Quickstart: Define -> Simulate -> Analyze
 
-The example below revisits the three-enzyme ABC pathway from the README. `Enz2` converts `A` into
-two copies of `B` and is inhibited by `B` through a Hill term with exponent two. Alongside the
+The example below tracks import, conversion, and export of a metabolite with ATP turnover. `TranspA`
+brings `A` into the cell, `Enz1` combines it with `ADP` to make `B` while regenerating `ATP`,
+`Enz2` converts `B` to `C`, `TranspC` exports `C`, and `ATPase` models generic ATP
+consumption. `B` feeds back to inhibit `Enz1` through a Hill term with exponent two. Alongside the
 regulated solution we also solve the pathway with regulation removed so you can compare both
 scenarios in one figure.
 
 **Step 1 – Describe the pathway.** We load the packages used throughout the walkthrough, define the
-ABC network, and extend `rate` with kinetics that include Hill-type feedback on `Enz2`.
+five-reaction network with constant media pools, and extend `rate` alongside the regulation toggle
+for `Enz1`.
 
 ```julia
 using CellMetabolismBase
@@ -30,42 +33,74 @@ using OrdinaryDiffEq, CairoMakie, LabelledArrays
 
 # 1. Describe the pathway ------------------------------------------------------
 pathway = MetabolicPathway(
-    (:A_media,), # treated as constant
+    (:A_media, :C_media), # treated as constant
     (
-        (:Enz1, (:A_media,), (:A,)),
-        (:Enz2, (:A,), (:B, :B), (), (:B,)), # B feeds back to inhibit Enz2
-        (:Enz3, (:B,), (:C,)),
+        (:TranspA, (:A_media,), (:A,)),
+        (:Enz1, (:A, :ADP), (:B, :ATP), (), (:B,)), # B feeds back to inhibit Enz1
+        (:Enz2, (:B,), (:C,)),
+        (:TranspC, (:C,), (:C_media,)),
+        (:ATPase, (:ATP,), (:ADP,)),
     ),
 )
 
-function CellMetabolismBase.rate(::Enzyme{:Enz1,(:A_media,),(:A,)}, metabs, params)
-    return params.Enz1_Vmax *
-           (metabs.A_media - metabs.A / params.Enz1_Keq) /
-           (1 + metabs.A_media / params.Enz1_K_A_media + metabs.A / params.Enz1_K_A)
+function CellMetabolismBase.rate(::Enzyme{:TranspA,(:A_media,),(:A,)}, metabs, params)
+    drive =
+        params.TranspA_Vmax *
+        (metabs.A_media - metabs.A / params.TranspA_Keq)
+    return drive / (1 + metabs.A_media / params.TranspA_K_A_media + metabs.A / params.TranspA_K_A)
 end
 
-function CellMetabolismBase.rate(::Enzyme{:Enz2,(:A,),(:B, :B),(),(:B,)}, metabs, params)
-    drive =
-        params.Enz2_Vmax *
-        (metabs.A - metabs.B^2 / params.Enz2_Keq) /
-        (1 + metabs.A / params.Enz2_K_A + (metabs.B / params.Enz2_K_B)^2)
-    inhibition = 1 / (1 + (metabs.B / params.Enz2_Ki_B)^2)
-    return drive * inhibition
+function CellMetabolismBase.rate(
+    ::Enzyme{:Enz1,(:A,:ADP),(:B,:ATP),(),(:B,)},
+    metabs,
+    params,
+)
+    forward = metabs.A * metabs.ADP
+    reverse = (metabs.B * metabs.ATP) / params.Enz1_Keq
+    drive = params.Enz1_Vmax * (forward - reverse)
+    sat = 1 / (
+        1 +
+        metabs.A / params.Enz1_K_A +
+        metabs.ADP / params.Enz1_K_ADP +
+        metabs.B / params.Enz1_K_B +
+        metabs.ATP / params.Enz1_K_ATP
+    )
+    inhibition = 1 / (1 + (metabs.B / params.Enz1_Ki_B)^2)
+    return drive * sat * inhibition
 end
 
 function CellMetabolismBase.remove_regulation(
-    ::Enzyme{:Enz2,(:A,),(:B, :B),(),(:B,)},
+    ::Enzyme{:Enz1,(:A,:ADP),(:B,:ATP),(),(:B,)},
     params,
 )
     new_params = deepcopy(params)
-    setproperty!(new_params, :Enz2_Ki_B, Inf)
+    setproperty!(new_params, :Enz1_Ki_B, Inf)
     return new_params
 end
 
-function CellMetabolismBase.rate(::Enzyme{:Enz3,(:B,),(:C,)}, metabs, params)
-    return params.Enz3_Vmax *
-           (metabs.B - metabs.C / params.Enz3_Keq) /
-           (1 + metabs.B / params.Enz3_K_B + metabs.C / params.Enz3_Keq)
+function CellMetabolismBase.rate(::Enzyme{:Enz2,(:B,),(:C,)}, metabs, params)
+    drive =
+        params.Enz2_Vmax *
+        (metabs.B - metabs.C / params.Enz2_Keq)
+    return drive / (1 + metabs.B / params.Enz2_K_B + metabs.C / params.Enz2_K_C)
+end
+
+function CellMetabolismBase.rate(::Enzyme{:TranspC,(:C,),(:C_media,)}, metabs, params)
+    drive =
+        params.TranspC_Vmax *
+        (metabs.C - metabs.C_media / params.TranspC_Keq)
+    return drive / (1 + metabs.C / params.TranspC_K_C + metabs.C_media / params.TranspC_K_C_media)
+end
+
+function CellMetabolismBase.rate(::Enzyme{:ATPase,(:ATP,),(:ADP,)}, metabs, params)
+    drive =
+        params.ATPase_Vmax *
+        (metabs.ATP - metabs.ADP / params.ATPase_Keq)
+    return drive / (
+        1 +
+        metabs.ATP / params.ATPase_K_ATP +
+        metabs.ADP / params.ATPase_K_ADP
+    )
 end
 ```
 
@@ -74,25 +109,44 @@ parameter set used by the rate laws.
 
 ```julia
 # 2. Initial conditions and parameters -----------------------------------------
-metabs0 = LVector(A_media = 5.0, A = 0.0, B = 0.0, C = 0.0)
+metabs0 = LVector(
+    A_media = 5.0,
+    C_media = 0.0,
+    A = 0.1,
+    B = 0.0,
+    C = 0.0,
+    ATP = 1.5,
+    ADP = 1.0,
+)
 params = LVector(
-    Enz1_Vmax = 1.0,
-    Enz1_Keq = 10.0,
-    Enz1_K_A_media = 1.0,
-    Enz1_K_A = 1.0,
-    Enz2_Vmax = 1.5,
-    Enz2_Keq = 5.0,
-    Enz2_K_A = 0.5,
-    Enz2_K_B = 0.5,
-    Enz2_Ki_B = 0.6,
-    Enz3_Vmax = 2.0,
-    Enz3_Keq = 4.0,
-    Enz3_K_B = 0.3,
+    TranspA_Vmax = 1.0,
+    TranspA_Keq = 8.0,
+    TranspA_K_A_media = 1.0,
+    TranspA_K_A = 1.0,
+    Enz1_Vmax = 0.8,
+    Enz1_Keq = 15.0,
+    Enz1_K_A = 0.4,
+    Enz1_K_ADP = 0.3,
+    Enz1_K_B = 0.3,
+    Enz1_K_ATP = 0.5,
+    Enz1_Ki_B = 0.6,
+    Enz2_Vmax = 1.2,
+    Enz2_Keq = 6.0,
+    Enz2_K_B = 0.4,
+    Enz2_K_C = 0.5,
+    TranspC_Vmax = 1.0,
+    TranspC_Keq = 5.0,
+    TranspC_K_C = 0.5,
+    TranspC_K_C_media = 0.5,
+    ATPase_Vmax = 0.6,
+    ATPase_Keq = 20.0,
+    ATPase_K_ATP = 0.7,
+    ATPase_K_ADP = 0.6,
 )
 ```
 
-**Step 3 – Build problems and solve both scenarios.** We create the regulated ODE problem, extend
-`remove_regulation` for `Enz2`, and solve a second problem with feedback disabled.
+**Step 3 – Build problems and solve both scenarios.** We create the regulated ODE problem, use the
+`remove_regulation` helper for `Enz1`, and solve a second problem with feedback disabled.
 
 ```julia
 # 3. Build and solve the ODE problems ------------------------------------------
@@ -100,8 +154,8 @@ tspan = (0.0, 40.0)
 prob = make_ODEProblem(pathway, metabs0, tspan, params)
 sol = solve(prob, RadauIIA9(); saveat = range(tspan...; length = 300), abstol = 1e-15, reltol = 1e-8)
 
-enz2 = CellMetabolismBase.Enzyme(:Enz2, (:A,), (:B, :B), (), (:B,))
-params_noreg = remove_regulation(enz2, params)
+enz1 = CellMetabolismBase.Enzyme(:Enz1, (:A, :ADP), (:B, :ATP), (), (:B,))
+params_noreg = remove_regulation(enz1, params)
 prob_noreg = make_ODEProblem(pathway, metabs0, tspan, params_noreg)
 sol_noreg = solve(prob_noreg, RadauIIA9(); saveat = sol.t, abstol = 1e-15, reltol = 1e-8)
 ```
@@ -126,7 +180,7 @@ colors = Makie.wong_colors()
 
 ax_states = Axis(fig[1, 1], title = "Metabolites", xlabel = "time", ylabel = "concentration")
 for (i, metab) in enumerate(propertynames(metabs0))
-    color = colors[i]
+    color = colors[mod1(i, length(colors))]
     lines!(
         ax_states,
         sol.t,
@@ -146,7 +200,7 @@ axislegend(ax_states, position = :rb)
 
 ax_rates = Axis(fig[1, 2], title = "Rates()", xlabel = "time", ylabel = "flux")
 for (j, label) in enumerate(enzyme_labels)
-    color = colors[j]
+    color = colors[mod1(j, length(colors))]
     lines!(
         ax_rates,
         sol.t,
@@ -165,7 +219,7 @@ end
 
 ax_ratio = Axis(fig[1, 3], title = "Disequilibrium", xlabel = "time", ylabel = "Q / K_eq")
 for (j, label) in enumerate(enzyme_labels)
-    color = colors[j]
+    color = colors[mod1(j, length(colors))]
     lines!(
         ax_ratio,
         sol.t,
@@ -187,17 +241,17 @@ fig
 ```
 
 The solid traces correspond to the regulated pathway, while dotted lines show the same colour for
-the deregulated counterpart. Removing `B`’s feedback accelerates `A` consumption, raises `B`
-concentrations, and shifts fluxes in a way that keeps disequilibrium ratios farther from unity—an
-effective comparison for reports or teaching material.
+the deregulated counterpart. Removing `B`’s feedback on `Enz1` accelerates `A` consumption, raises
+`B` and `C` production, and shifts fluxes in a way that keeps disequilibrium ratios farther from
+unity—an effective comparison for reports or teaching material.
 
 ## Roadmap
 
-- Introduce unit-aware parameters and initial conditions to ensure unit consistency
 - Add Global Sensitivity Analysis functionality to identify key parameters influencing pathway behavior
-- Implement ability to write down isotope tracing ODE models
+- Introduce unit-aware parameters and initial conditions to ensure unit consistency
 - Implement atom conservation validation to catch errors in metabolic reaction formulation
+- Implement ability to write down isotope tracing ODE models
 
 ## CellMetabolismBase vs Catalyst.jl
 
-[Catalyst.jl](https://catalyst.sciml.ai/stable/) is the mature package with many features for analysis and simulation of chemical reaction networks in [Julia Programming Language](https://julialang.org) and you should use it instead of CellMetabolismBase for most applications. The specific focus of CellMetabolismBase is to facilitate the investigation of control of metabolic pathways by allosteric regulators while [Catalyst.jl](https://catalyst.sciml.ai/stable/) is a more general framework for chemical reaction network modeling. The goal behind CellMetabolismBase is to have a lightweight package with small number of dependencies that converts a collection of enzyme rate equations into a metabolic pathway that can be simulated with [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) and provides utilities that ensure that many typos in enzyme rate equations and pathway formulation are caught early.  CellMetabolismBase is designed to be extended by other packages such as [CellMetabolism.jl](https://github.com/DenisTitovLab/CellMetabolism.jl) to enable simulation of large cellular metabolism models with custom rate equations and regulation patterns.
+[Catalyst.jl](https://catalyst.sciml.ai/stable/) is a mature package with many features for analysis and simulation of chemical reaction networks in [Julia Programming Language](https://julialang.org) and you should use it instead of CellMetabolismBase for most applications. The specific focus of CellMetabolismBase is to facilitate the investigation of control of metabolic pathways by allosteric regulators while [Catalyst.jl](https://catalyst.sciml.ai/stable/) is a more general framework for chemical reaction network modeling. The goal behind CellMetabolismBase is to have a lightweight package with small number of dependencies that converts a collection of enzyme rate equations into a metabolic pathway that can be simulated with [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) and provides utilities that validate that enzyme rate equations and metabolic pathways are written down correctly.  CellMetabolismBase is designed to be extended by other packages such as [CellMetabolism.jl](https://github.com/DenisTitovLab/CellMetabolism.jl) to enable simulation of large cellular metabolism models with custom rate equations and regulation patterns.
