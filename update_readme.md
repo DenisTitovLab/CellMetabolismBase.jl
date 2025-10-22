@@ -216,6 +216,7 @@ for (j, label) in enumerate(enzyme_labels)
         linestyle = :dot,
     )
 end
+axislegend(ax_rates, position = :rb)
 
 ax_ratio = Axis(fig[1, 3], title = "Disequilibrium", xlabel = "time", ylabel = "Q / K_eq")
 for (j, label) in enumerate(enzyme_labels)
@@ -236,8 +237,9 @@ for (j, label) in enumerate(enzyme_labels)
     )
     hlines!(ax_ratio, [1.0]; color = :gray80, linestyle = :dash)
 end
+axislegend(ax_ratio, position = :rb)
 
-fig
+display(fig)
 ```
 
 The solid traces correspond to the regulated pathway, while dotted lines show the same colour for
