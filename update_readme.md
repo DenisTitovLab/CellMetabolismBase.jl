@@ -165,38 +165,38 @@ and disequilibrium ratios for both trajectories. Dotted lines reuse the solid co
 the impact of removing regulation at a glance.
 
 ```julia
-# 4. Analyse metabolite states, rates, and disequilibrium ratios ---------------
-states = sol.u
-states_noreg = sol_noreg.u
-rates_over_time = [rates(pathway, state, params) for state in states]
-rates_over_time_noreg = [rates(pathway, state, params_noreg) for state in states_noreg]
-ratio_over_time = [disequilibrium_ratios(pathway, state, params) for state in states]
+# 4. Analyse metabolite concs, rates, and disequilibrium ratios ---------------
+concs = sol.u
+concs_noreg = sol_noreg.u
+rates_over_time = [rates(pathway, state, params) for state in concs]
+rates_over_time_noreg = [rates(pathway, state, params_noreg) for state in concs_noreg]
+ratio_over_time = [disequilibrium_ratios(pathway, state, params) for state in concs]
 ratio_over_time_noreg =
-    [disequilibrium_ratios(pathway, state, params_noreg) for state in states_noreg]
+    [disequilibrium_ratios(pathway, state, params_noreg) for state in concs_noreg]
 enzyme_labels = enzymes(pathway)
 
 fig = Figure(size = (960, 320))
 colors = Makie.wong_colors()
 
-ax_states = Axis(fig[1, 1], title = "Metabolites", xlabel = "time", ylabel = "concentration")
+ax_concs = Axis(fig[1, 1], title = "Metabolites", xlabel = "time", ylabel = "concentration")
 for (i, metab) in enumerate(propertynames(metabs0))
     color = colors[mod1(i, length(colors))]
     lines!(
-        ax_states,
+        ax_concs,
         sol.t,
-        [s[metab] for s in states];
+        [s[metab] for s in concs];
         color = color,
         label = string(metab),
     )
     lines!(
-        ax_states,
+        ax_concs,
         sol_noreg.t,
-        [s[metab] for s in states_noreg];
+        [s[metab] for s in concs_noreg];
         color = color,
         linestyle = :dot,
     )
 end
-axislegend(ax_states, position = :rb)
+axislegend(ax_concs, position = :rb)
 
 ax_rates = Axis(fig[1, 2], title = "Rates()", xlabel = "time", ylabel = "flux")
 for (j, label) in enumerate(enzyme_labels)
