@@ -44,33 +44,33 @@ pathway = MetabolicPathway(
 )
 
 function CellMetabolismBase.rate(::Enzyme{:TranspA,(:A_media,),(:A,)}, metabs, params)
-    drive =
-        params.TranspA_Vmax *
-        (metabs.A_media - metabs.A / params.TranspA_Keq)
-    return drive / (1 + metabs.A_media / params.TranspA_K_A_media + metabs.A / params.TranspA_K_A)
+    rate =
+        (params.TranspA_Vmax / params.TranspA_K_A_media) *
+        (metabs.A_media - metabs.A / params.TranspA_Keq) /
+        (1 + metabs.A_media / params.TranspA_K_A_media + metabs.A / params.TranspA_K_A)
+    return rate
 end
 
 function CellMetabolismBase.rate(
-    ::Enzyme{:Enz1,(:A,:ADP),(:B,:ATP),(),(:B,)},
+    ::Enzyme{:Enz1,(:A, :ADP),(:B, :ATP),(),(:B,)},
     metabs,
     params,
 )
-    forward = metabs.A * metabs.ADP
-    reverse = (metabs.B * metabs.ATP) / params.Enz1_Keq
-    drive = params.Enz1_Vmax * (forward - reverse)
-    sat = 1 / (
-        1 +
-        metabs.A / params.Enz1_K_A +
-        metabs.ADP / params.Enz1_K_ADP +
-        metabs.B / params.Enz1_K_B +
-        metabs.ATP / params.Enz1_K_ATP
-    )
-    inhibition = 1 / (1 + (metabs.B / params.Enz1_Ki_B)^2)
-    return drive * sat * inhibition
+    rate =
+        (params.Enz1_Vmax / (params.Enz1_K_A * params.Enz1_K_ADP)) *
+        (metabs.A * metabs.ADP - (metabs.B * metabs.ATP) / params.Enz1_Keq) / (
+            1 +
+            metabs.A / params.Enz1_K_A +
+            metabs.ADP / params.Enz1_K_ADP +
+            metabs.B / params.Enz1_K_B +
+            metabs.ATP / params.Enz1_K_ATP
+        )
+    inhibition_term = 1 / (1 + (metabs.B / params.Enz1_Ki_B)^2)
+    return rate * inhibition_term
 end
 
 function CellMetabolismBase.remove_regulation(
-    ::Enzyme{:Enz1,(:A,:ADP),(:B,:ATP),(),(:B,)},
+    ::Enzyme{:Enz1,(:A, :ADP),(:B, :ATP),(),(:B,)},
     params,
 )
     new_params = deepcopy(params)
@@ -79,28 +79,26 @@ function CellMetabolismBase.remove_regulation(
 end
 
 function CellMetabolismBase.rate(::Enzyme{:Enz2,(:B,),(:C,)}, metabs, params)
-    drive =
-        params.Enz2_Vmax *
-        (metabs.B - metabs.C / params.Enz2_Keq)
-    return drive / (1 + metabs.B / params.Enz2_K_B + metabs.C / params.Enz2_K_C)
+    rate =
+        (params.Enz2_Vmax / params.Enz2_K_B) * (metabs.B - metabs.C / params.Enz2_Keq) /
+        (1 + metabs.B / params.Enz2_K_B + metabs.C / params.Enz2_K_C)
+    return rate
 end
 
 function CellMetabolismBase.rate(::Enzyme{:TranspC,(:C,),(:C_media,)}, metabs, params)
-    drive =
-        params.TranspC_Vmax *
-        (metabs.C - metabs.C_media / params.TranspC_Keq)
-    return drive / (1 + metabs.C / params.TranspC_K_C + metabs.C_media / params.TranspC_K_C_media)
+    rate =
+        (params.TranspC_Vmax / params.TranspC_K_C) *
+        (metabs.C - metabs.C_media / params.TranspC_Keq) /
+        (1 + metabs.C / params.TranspC_K_C + metabs.C_media / params.TranspC_K_C_media)
+    return rate
 end
 
 function CellMetabolismBase.rate(::Enzyme{:ATPase,(:ATP,),(:ADP,)}, metabs, params)
-    drive =
-        params.ATPase_Vmax *
-        (metabs.ATP - metabs.ADP / params.ATPase_Keq)
-    return drive / (
-        1 +
-        metabs.ATP / params.ATPase_K_ATP +
-        metabs.ADP / params.ATPase_K_ADP
-    )
+    rate =
+        (params.ATPase_Vmax / params.ATPase_K_ATP) *
+        (metabs.ATP - metabs.ADP / params.ATPase_Keq) /
+        (1 + metabs.ATP / params.ATPase_K_ATP + metabs.ADP / params.ATPase_K_ADP)
+    return rate
 end
 ```
 
