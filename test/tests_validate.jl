@@ -561,6 +561,49 @@
         product_activator_params,
     )
 
+    # ------- Test: Ping Pong Bi Bi passes validation (0/0 NaN fallback) -------
+    # Ping Pong mechanisms lack a free-enzyme constant term in the denominator,
+    # so both numerator and denominator are zero when all substrates/products are
+    # zero, producing NaN. The validator should handle this via the limit fallback.
+    pingpong_pathway =
+        MetabolicPathway((), ((:PingPongEnz, (:A, :B), (:P, :Q)),))
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:PingPongEnz,(:A, :B),(:P, :Q)},
+        metabs,
+        params,
+    )
+        Vmax = params.PingPongEnz_Vmax
+        Keq = params.PingPongEnz_Keq
+        K_A = params.PingPongEnz_K_A
+        K_B = params.PingPongEnz_K_B
+        K_P = params.PingPongEnz_K_P
+        K_Q = params.PingPongEnz_K_Q
+        A, B, P, Q = metabs.A, metabs.B, metabs.P, metabs.Q
+
+        num = Vmax * (A * B - P * Q / Keq)
+        denom = K_B * A + K_A * B + A * B +
+                K_Q * P / Keq + K_P * Q / Keq + P * Q / Keq +
+                K_B * A * Q / K_Q + K_A * B * P / K_P
+        return num / denom
+    end
+
+    pingpong_metabs = LVector(A = 1.0, B = 0.5, P = 0.2, Q = 0.1)
+    pingpong_params = LVector(
+        PingPongEnz_Vmax = 1.0,
+        PingPongEnz_Keq = 5.0,
+        PingPongEnz_K_A = 0.3,
+        PingPongEnz_K_B = 0.2,
+        PingPongEnz_K_P = 0.4,
+        PingPongEnz_K_Q = 0.5,
+    )
+
+    @test_nowarn CellMetabolismBase.validate_enzyme_rates(
+        pingpong_pathway,
+        pingpong_metabs,
+        pingpong_params,
+    )
+
     # ------- Test: Enzyme rate is zero when all substrates and products absent -------
     # Create a specialized test for this case
     never_zero_pathway = MetabolicPathway((:S_ext,), ((:NeverZeroEnz, (:S_ext,), (:S,)),))
