@@ -362,7 +362,19 @@ function validate_enzyme_rates(
         for metab in [substrate_names..., product_names...]
             empty_metabs[metab] = 0.0
         end
-        rate(Enzyme(Enz...), empty_metabs, rand_params) == 0.0 || error("Enzyme $(Enz[1]) rate should be zero when all substrates and products are absent.")
+        zero_rate = rate(Enzyme(Enz...), empty_metabs, rand_params)
+        if isnan(zero_rate)
+            # Ping Pong and similar mechanisms produce 0/0 = NaN at exactly zero
+            # concentrations. Fall back to checking the limit approaches zero.
+            near_zero_metabs = deepcopy(rand_test_metabs)
+            for metab in [substrate_names..., product_names...]
+                near_zero_metabs[metab] = eps(Float64)
+            end
+            near_zero_rate = rate(Enzyme(Enz...), near_zero_metabs, rand_params)
+            isapprox(near_zero_rate, 0.0; atol=1e-8) || error("Enzyme $(Enz[1]) rate should approach zero when all substrates and products approach zero, but got $(near_zero_rate).")
+        else
+            zero_rate == 0.0 || error("Enzyme $(Enz[1]) rate should be zero when all substrates and products are absent.")
+        end
 
         # rate is zero when substrates and products are at equilibrium
         equilibrium_metabs = deepcopy(rand_test_metabs)
