@@ -737,4 +737,37 @@
         multiple_params,
     )
 
+    # Test: Enzyme where the Keq is scaled by the ratio of two metabolites passes validation
+    scale_by_ratio_pathway =
+        MetabolicPathway((:A,), ((:Enz_scale_by_ratio, (:A, :B), (:C, :D)),))
+    scale_by_ratio_params = LVector(
+        Enz_scale_by_ratio_Vmax = 0.1,
+        Enz_scale_by_ratio_Km_A = 0.5,
+        Enz_scale_by_ratio_Km_C = 0.5,
+        Enz_scale_by_ratio_Keq = 2.0,
+    )
+    scale_by_ratio_metabs = LVector(A = 2.0, B = 5.0, C = 2.0, D = 10.0)
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:Enz_scale_by_ratio,(:A, :B),(:C, :D)},
+        metabs,
+        params,
+    )
+        # Scale the Keq by the ratio of two metabolites
+        Keq_apparent = params.Enz_scale_by_ratio_Keq * (metabs.B / metabs.D)
+        numerator = metabs.A - (metabs.C / Keq_apparent)
+        denominator =
+            1 +
+            (metabs.A / params.Enz_scale_by_ratio_Km_A) +
+            (metabs.C / params.Enz_scale_by_ratio_Km_C)
+        return (params.Enz_scale_by_ratio_Vmax / params.Enz_scale_by_ratio_Km_A) *
+               (numerator / denominator)
+    end
+
+    @test_nowarn CellMetabolismBase.validate(
+        scale_by_ratio_pathway,
+        scale_by_ratio_metabs,
+        scale_by_ratio_params,
+    )
+
 end
