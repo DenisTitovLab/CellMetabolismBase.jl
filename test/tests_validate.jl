@@ -657,4 +657,117 @@
         non_eq_metabs,
         non_eq_params,
     )
+
+    # Test rate is zero at equilibrium for enzymes with multiple products of the same type
+
+    "Helper to create the rate equation of each enzyme with multiple products"
+    function _create_multiple_rate(prefix::Symbol, metabs, params, D_power::Int)
+        Vmax = getproperty(params, Symbol(prefix, "_Vmax"))
+        Keq = getproperty(params, Symbol(prefix, "_Keq"))
+        Km_A = getproperty(params, Symbol(prefix, "_Km_A"))
+        Km_B = getproperty(params, Symbol(prefix, "_Km_B"))
+        Km_C = getproperty(params, Symbol(prefix, "_Km_C"))
+        Km_D = getproperty(params, Symbol(prefix, "_Km_D"))
+        numerator = (metabs.A^2 * metabs.B) - ((metabs.C^3 * metabs.D^D_power) / Keq)
+        denominator =
+            1 +
+            ((metabs.A^2 * metabs.B) / (Km_A * Km_B)) +
+            ((metabs.C^3 * metabs.D^D_power) / (Km_C * Km_D))
+        return (Vmax / (Km_A * Km_B)) * (numerator / denominator)
+    end
+
+    multiple_pathway = MetabolicPathway(
+        (),
+        (
+            # The first product appears more than once
+            (:Enz_dup_first, (:A, :A, :B), (:C, :C, :C, :D)),
+            # The first product appears only once
+            (:Enz_dup_second, (:A, :A, :B), (:D, :C, :C, :C)),
+            # Both first and second products appear more than once
+            (:Enz_dup_both, (:A, :A, :B), (:D, :D, :C, :C, :C)),
+        ),
+    )
+    multiple_params = LVector(
+        Enz_dup_first_Vmax = 0.1,
+        Enz_dup_first_Km_A = 0.5,
+        Enz_dup_first_Km_B = 0.4,
+        Enz_dup_first_Km_C = 0.3,
+        Enz_dup_first_Km_D = 0.1,
+        Enz_dup_first_Keq = 2.0,
+        Enz_dup_second_Vmax = 0.9,
+        Enz_dup_second_Km_A = 0.1,
+        Enz_dup_second_Km_B = 0.4,
+        Enz_dup_second_Km_C = 0.5,
+        Enz_dup_second_Km_D = 0.6,
+        Enz_dup_second_Keq = 4.0,
+        Enz_dup_both_Vmax = 0.2,
+        Enz_dup_both_Km_A = 0.2,
+        Enz_dup_both_Km_B = 0.4,
+        Enz_dup_both_Km_C = 0.6,
+        Enz_dup_both_Km_D = 0.8,
+        Enz_dup_both_Keq = 9.0,
+    )
+    multiple_metabs = LVector(A = 2.0, B = 4.0, C = 2.0, D = 8.0)
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:Enz_dup_first,(:A, :A, :B),(:C, :C, :C, :D)},
+        metabs,
+        params,
+    )
+        return _create_multiple_rate(:Enz_dup_first, metabs, params, 1)
+    end
+    function CellMetabolismBase.rate(
+        ::Enzyme{:Enz_dup_second,(:A, :A, :B),(:D, :C, :C, :C)},
+        metabs,
+        params,
+    )
+        return _create_multiple_rate(:Enz_dup_second, metabs, params, 1)
+    end
+    function CellMetabolismBase.rate(
+        ::Enzyme{:Enz_dup_both,(:A, :A, :B),(:D, :D, :C, :C, :C)},
+        metabs,
+        params,
+    )
+        return _create_multiple_rate(:Enz_dup_both, metabs, params, 2)
+    end
+
+    @test_nowarn CellMetabolismBase.validate(
+        multiple_pathway,
+        multiple_metabs,
+        multiple_params,
+    )
+
+    # Test: Enzyme where the Keq is scaled by the ratio of two metabolites passes validation
+    scale_by_ratio_pathway =
+        MetabolicPathway((:A,), ((:Enz_scale_by_ratio, (:A, :B), (:C, :D)),))
+    scale_by_ratio_params = LVector(
+        Enz_scale_by_ratio_Vmax = 0.1,
+        Enz_scale_by_ratio_Km_A = 0.5,
+        Enz_scale_by_ratio_Km_C = 0.5,
+        Enz_scale_by_ratio_Keq = 2.0,
+    )
+    scale_by_ratio_metabs = LVector(A = 2.0, B = 5.0, C = 2.0, D = 10.0)
+
+    function CellMetabolismBase.rate(
+        ::Enzyme{:Enz_scale_by_ratio,(:A, :B),(:C, :D)},
+        metabs,
+        params,
+    )
+        # Scale the Keq by the ratio of two metabolites
+        Keq_apparent = params.Enz_scale_by_ratio_Keq * (metabs.B / metabs.D)
+        numerator = metabs.A - (metabs.C / Keq_apparent)
+        denominator =
+            1 +
+            (metabs.A / params.Enz_scale_by_ratio_Km_A) +
+            (metabs.C / params.Enz_scale_by_ratio_Km_C)
+        return (params.Enz_scale_by_ratio_Vmax / params.Enz_scale_by_ratio_Km_A) *
+               (numerator / denominator)
+    end
+
+    @test_nowarn CellMetabolismBase.validate(
+        scale_by_ratio_pathway,
+        scale_by_ratio_metabs,
+        scale_by_ratio_params,
+    )
+
 end

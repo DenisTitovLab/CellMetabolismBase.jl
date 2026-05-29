@@ -378,15 +378,34 @@ function validate_enzyme_rates(
 
         # rate is zero when substrates and products are at equilibrium
         equilibrium_metabs = deepcopy(rand_test_metabs)
-        if length(unique(product_names)) == length(product_names)
-            equilibrium_metabs[product_names[1]] = rand_params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
-                                          reduce(*, [equilibrium_metabs[product] for product in product_names[2:end]], init=1.0)
-        else
-            equilibrium_metabs[product_names[1]] = sqrt(rand_params[Symbol(Enz[1], "_Keq")] * reduce(*, [equilibrium_metabs[substrate] for substrate in substrate_names], init=1.0) /
-                                               reduce(*, [equilibrium_metabs[product] for product in product_names if product != product], init=1.0))
-        end
-        isapprox(1.0 - rate(Enzyme(Enz...), equilibrium_metabs, rand_params), 1.0) ||
-            error("Enzyme $(Enz[1]) rate = $(rate(Enzyme(Enz...), equilibrium_metabs, rand_params)) when substrates and products are at equilibrium but should be zero.")
+
+        first_product = product_names[1]
+        first_product_count = count(==(first_product), product_names)
+
+        numerator =
+            rand_params[Symbol(Enz[1], "_Keq")] * reduce(
+                *,
+                [equilibrium_metabs[substrate] for substrate in substrate_names],
+                init = 1.0,
+            )
+
+        denominator = reduce(
+            *,
+            [
+                equilibrium_metabs[product] for
+                product in product_names if product != first_product
+            ],
+            init = 1.0,
+        )
+
+        # Get the required concentration of first product to get the reaction to equilibrium
+        required_first_product_value = (numerator / denominator)^(1.0 / first_product_count)
+        equilibrium_metabs[first_product] = required_first_product_value
+        isapprox(1.0 - rate(Enzyme(Enz...), equilibrium_metabs, rand_params), 1.0) || error(
+            "Enzyme " *
+            "$(Enz[1]) rate = $(rate(Enzyme(Enz...), equilibrium_metabs, rand_params))" *
+            "when substrates and products are at equilibrium but should be zero.",
+        )
     end
     return nothing
 end
