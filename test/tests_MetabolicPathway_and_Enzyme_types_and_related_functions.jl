@@ -249,3 +249,141 @@ end
     @test neutral_params.Custom_L == 0.0
     @test neutral_params.Custom_bias == 0.0
 end
+
+@testsnippet GenerateRandomStoichiometricMatrix begin
+    using SparseArrays, Distributions, StatsBase, Random
+
+    """
+    Helper to calculate the probability weights that determine the number of reactions a
+    metabolite is involved in according to a power law.
+    """
+    function get_powerlaw_weights(m::Int, alpha::Float64)
+        return [1.0 / (i^alpha) for i = 1:m]
+    end
+
+    """
+    Helper to generate a random stoichiometric matrix that has a scale-free network topology
+    (Jeon et. al. 2000). Each reaction has a minimum of 2 participants and an average of
+    `avg_participants`. 90% of the coefficients in the network are -1 or 1, 10% of the
+    coefficients are -2 or 2. The steepness of the power law that defines the scale-free
+    network is set by `alpha` (default value matches finding of Jeon et. al. 2000).
+
+    References
+        Jeong, Hawoong, et al. "The large-scale organization of metabolic networks." Nature
+        407.6804 (2000): 651-654.
+    """
+    function generate_random_stoichiometric_matrix(
+        m::Int,
+        n::Int;
+        avg_participants::Float64 = 4.0,
+        alpha::Float64 = 0.833334,
+    )
+        weights = get_powerlaw_weights(m, alpha)
+
+        # Construct vector of weight values
+        prob_weights = Weights(weights)
+
+        # Shuffle the indices so the mega-hubs aren't always rows 1, 2, and 3
+        metabolite_ids = randperm(m)
+
+        I = Int[] # row index
+        J = Int[] # column index
+        V = Int[] # value
+
+        rxn_size_dist = Poisson(avg_participants - 2.0)
+
+        for j = 1:n
+            num_participants = min(m, 2.0 + rand(rxn_size_dist))
+
+            participants = Set{Int}()
+            while length(participants) < num_participants
+                # Draw a metabolite strictly according to the Power Law
+                chosen_index = sample(metabolite_ids, prob_weights)
+                push!(participants, chosen_index)
+            end
+
+            for i in participants
+                coeff = rand() < 0.9 ? rand([-1, 1]) : rand([-2, 2])
+                push!(I, i), push!(J, j), push!(V, coeff)
+            end
+        end
+
+        return sparse(I, J, V, m, n)
+    end
+end
+
+@testitem "Random stoichiometric matrix generation" setup =
+    [GenerateRandomStoichiometricMatrix] begin
+    using Random
+
+    # Create a random matrix for all following tests
+    m = rand(10:50)
+    n = rand(10:50)
+    random_S = generate_random_stoichiometric_matrix(m, n)
+
+    @testset "The dimensions and type are correct" begin
+        @test size(random_S, 1) == m && size(random_S, 2) == n
+        @test random_S isa SparseMatrixCSC
+    end
+
+    @testset "The desity of the matrix is determined by the `avg_participants`" begin
+        avg_participants = 4.0
+        expected_density = avg_participants / m
+        actual_density = nnz(random_S) / (m * n)
+        @test isapprox(expected_density, actual_density, rtol = 0.1)
+    end
+
+    @testset "Coefficient values must only be -2, -1, 1, or 2" begin
+        valid_coeffs = Set([-2, -1, 1, 2])
+        @test all(v -> v in valid_coeffs, nonzeros(random_S))
+    end
+
+    @testset "Reaction sizes should be ≥ 2 or ≤ `m`" begin
+        # Get the number of non-zeros in each column
+        col_participant_counts = diff(random_S.colptr)
+        @test minimum(col_participant_counts) >= 2
+        @test maximum(col_participant_counts) <= m
+    end
+
+    @testset "Scale-free network topology" begin
+        # In a scale-free network, mega-hub metabolites should be involved in many more
+        # reactions than the median. In a normal/Poisson network, the metabolite involved
+        # in the maximum number of reactions is usually close to the median
+        Random.seed!(42)
+        S = generate_random_stoichiometric_matrix(1000, 5000)
+
+        # Get degrees of all metabolites
+        row_degrees = zeros(Int, 1000)
+        for r in rowvals(S)
+            row_degrees[r] += 1
+        end
+
+        max_degree = maximum(row_degrees)
+        median_degree = median(row_degrees)
+
+        @test max_degree > (median_degree * 10)
+    end
+
+    @testset "Power Law Weight Generation" begin
+        m = 5
+        alpha = 0.8333
+
+        # Generate the weights
+        weights = get_powerlaw_weights(m, alpha)
+
+        # 1. The first weight should always be exactly 1.0 (1 / 1^alpha)
+        @test weights[1] == 1.0
+
+        # 2. Check the mathematical decline of the weights
+        # For element 2, weight should be 1 / (2^0.8333) ≈ 0.56123
+        @test isapprox(weights[2], 1.0 / (2^alpha), atol = 1e-5)
+
+        # For element 5, weight should be 1 / (5^0.8333) ≈ 0.26116
+        @test isapprox(weights[5], 1.0 / (5^alpha), atol = 1e-5)
+
+        # 3. Ensure all weights are strictly positive and descending
+        @test all(weights .> 0)
+        @test issorted(weights, rev = true)
+    end
+end
+
