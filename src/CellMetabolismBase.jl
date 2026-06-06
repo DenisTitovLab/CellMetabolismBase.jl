@@ -25,6 +25,7 @@ export disequilibrium_ratios
 
 #Accessor functions for Enzyme and MetabolicPathway types
 export stoichiometric_matrix
+export conserved_moieties
 export name
 export enzymes
 export substrates

@@ -6,6 +6,7 @@ authors = ["Denis Titov <titov@berkeley.edu>  and contributors"]
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 
 [compat]
@@ -17,6 +18,7 @@ JET = "0.10, 0.11"
 LabelledArrays = "1.16.0"
 OrdinaryDiffEqFIRK = "2"
 SciMLBase = "3"
+LinearAlgebra = "1.12.0"
 Random = "1.11.0"
 SparseArrays = "1.12.0"
 StatsBase = "0.34.11"
