@@ -515,6 +515,29 @@ end
             # If passed an empty list, it should return -1 safely without bounds errors.
             @test CellMetabolismBase._find_best_column(S, Int[]) == -1
         end
+
+        @testset "_find_minimal_conserved_moieties removes non minimal moieties" begin
+            R_mock = [
+                1 1 1 0 0 # Minimal
+                1 1 1 0 1 # Not minimal, superset of first
+                0 0 0 1 0 # Minimal
+                1 1 1 1 0 # Not minimal, superset of first and third
+            ]
+            R_filtered = CellMetabolismBase._find_minimal_conserved_moieties(R_mock)
+
+            # Verify the function stripped the two superset rows
+            @test size(R_filtered, 1) == 2
+
+            # First conserved moiety is the smallest minimal pool
+            @test R_filtered[1, :] == [0, 0, 0, 1, 0]
+            # Second conserved moiety is the largest minimal pool
+            @test R_filtered[2, :] == [1, 1, 1, 0, 0]
+            # The entire minimal conserved moiety matrix is correct
+            @test R_filtered == [
+                0 0 0 1 0
+                1 1 1 0 0
+            ]
+        end
     end
 
     @testset "Toy networks tests" begin

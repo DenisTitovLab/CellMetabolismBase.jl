@@ -421,6 +421,46 @@ function _find_best_column(dots_matrix, remaining_cols)
 end
 
 """
+Helper to find the matrix of minimal conserved moieties. If pool A is a subset of pool B,
+then B is not minimal and is removed.
+"""
+function _find_minimal_conserved_moieties(R)
+    num_rows = size(R, 1)
+
+    # Base cases: 0 or 1 row means it's already minimal
+    if num_rows <= 1
+        return R
+    end
+
+    # Get the indeces and sizes of each candidate moiety
+    candidate_moieties = [BitSet(findall(!=(0), row)) for row in eachrow(R)]
+    sizes = [length(i) for i in candidate_moieties]
+
+    # Sort rows by their support size (smallest first)
+    p_sort = sortperm(sizes)
+    R = R[p_sort, :]
+    candidate_moieties = candidate_moieties[p_sort]
+
+    keep = trues(num_rows)
+    for i = 1:num_rows
+        if !keep[i] # if already false continue to the next
+            continue
+        end
+        for k = (i+1):num_rows
+            if !keep[k] # if already false continue to the next
+                continue
+            end
+            # If candidate_moiety i is a subset of candidate_moiety k, then
+            # k is not minimal and is discarded
+            if issubset(candidate_moieties[i], candidate_moieties[k])
+                keep[k] = false
+            end
+        end
+    end
+    return R[keep, :]
+end
+
+"""
 Computes the strictly positive left null space of a stoichiometric matrix `S`.
 Mathematically, it solves for all vectors R >= 0 such that R * S = 0. Each row in the
 returned matrix R represents an "extreme ray", which physically corresponds to a
@@ -499,34 +539,7 @@ function _fourier_motzkin(S)
             R = R[keep_nonzeros, :]
             num_rows = size(R, 1)
 
-            if num_rows > 1
-                # Get the indeces and sizes of each candidate moiety
-                candidate_moieties = [BitSet(findall(!=(0), row)) for row in eachrow(R)]
-                sizes = [length(i) for i in candidate_moieties]
-
-                # Sort rows by their support size (smallest first)
-                p_sort = sortperm(sizes)
-                R = R[p_sort, :]
-                candidate_moieties = candidate_moieties[p_sort]
-
-                keep = trues(num_rows)
-                for i = 1:num_rows
-                    if !keep[i] # if already false continue to the next
-                        continue
-                    end
-                    for k = (i+1):num_rows
-                        if !keep[k] # if already false continue to the next
-                            continue
-                        end
-                        # If candidate_moiety i is a subset of candidate_moiety k, then
-                        # k is not minimal and is discarded
-                        if issubset(candidate_moieties[i], candidate_moieties[k])
-                            keep[k] = false
-                        end
-                    end
-                end
-                R = R[keep, :]
-            end
+            R = _find_minimal_conserved_moieties(R)
         end
     end
     # After eliminating all columns (reactions), the remaining rows in R satisfy both
