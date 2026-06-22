@@ -50,7 +50,8 @@ function make_EnsembleProblem(
 
     length(vect_init_cond) == length(vect_params) || error("vect_init_cond and vect_params must have the same length")
     prob = make_ODEProblem(metab_path, vect_init_cond[1], tspan, vect_params[1])
-    function prob_func(prob, i, repeat)
+    function prob_func(prob, ctx)
+        i = ctx.sim_id
         @. prob.u0 = vect_init_cond[i]
         @. prob.p = vect_params[i]
         return prob

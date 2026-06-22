@@ -61,7 +61,7 @@
         reltol = 1e-8,
         trajectories = 2,
     )
-    @test length(sol) == 2
+    @test length(sol.u) == 2
 
     # Check that the solutions are different (used different params/init conditions)
     @test sol.u[1].u[end] != sol.u[2].u[end]
@@ -79,7 +79,7 @@
         reltol = 1e-8,
         trajectories = 2,
     )
-    @test length(sol) == 2
+    @test length(sol.u) == 2
 
     # Solutions should differ due to different initial conditions
     @test sol.u[1].u[1] != sol.u[2].u[1]
@@ -97,7 +97,7 @@
         reltol = 1e-8,
         trajectories = 2,
     )
-    @test length(sol) == 2
+    @test length(sol.u) == 2
 
     # Solutions should differ due to different parameters
     @test sol.u[1].u[end] != sol.u[2].u[end]
@@ -170,7 +170,7 @@
         reltol = 1e-8,
         trajectories = n_bootstraps,
     )
-    @test length(sol) == n_bootstraps
+    @test length(sol.u) == n_bootstraps
 
     # Check that the solutions vary (due to different random samples)
     final_vals = [s.u[end][4] for s in sol.u]  # Get final values for metabolite C
@@ -194,7 +194,7 @@
 
     # Check a few samples
     for i = 1:5
-        new_prob = prob_func(base_prob, i, 1)
+        new_prob = prob_func(base_prob, (; sim_id = i))
 
         # Test initial conditions are within reasonable bounds
         # For normal distributions, most values should be within 3 std devs
@@ -233,7 +233,7 @@
         reltol = 1e-8,
         trajectories = n_bootstraps,
     )
-    @test length(sol) == n_bootstraps
+    @test length(sol.u) == n_bootstraps
 
     # Check that the solutions vary due to different initial conditions
     initial_vals = [s.u[1][2] for s in sol.u]  # Get initial values for metabolite A
@@ -243,7 +243,7 @@
     prob_func = ensemble_prob.prob_func
     base_prob = ensemble_prob.prob
     for i = 1:5
-        new_prob = prob_func(base_prob, i, 1)
+        new_prob = prob_func(base_prob, (; sim_id = i))
         @test new_prob.p == params1  # Parameters should remain fixed
     end
 
@@ -266,7 +266,7 @@
         reltol = 1e-8,
         trajectories = n_bootstraps,
     )
-    @test length(sol) == n_bootstraps
+    @test length(sol.u) == n_bootstraps
 
     # Check that the solutions vary due to different parameters
     final_vals = [s.u[end][5] for s in sol.u]  # Get final values for metabolite D
@@ -276,7 +276,7 @@
     prob_func = ensemble_prob.prob_func
     base_prob = ensemble_prob.prob
     for i = 1:5
-        new_prob = prob_func(base_prob, i, 1)
+        new_prob = prob_func(base_prob, (; sim_id = i))
         @test new_prob.u0 == init_cond1  # Initial conditions should remain fixed
     end
 end
