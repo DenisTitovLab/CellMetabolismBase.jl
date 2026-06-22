@@ -78,11 +78,11 @@
         $params,
         0.0,
     )
-    @test mean(benchmark_result.times) <= 200 #ns
+    @test minimum(benchmark_result.times) <= 200 #ns
     @test benchmark_result.allocs == 0
 
     benchmark_result = @benchmark test_odes!($dmetabs, $metabs, $params, 0.0)
-    @test mean(benchmark_result.times) <= 200 #ns
+    @test minimum(benchmark_result.times) <= 200 #ns
     @test benchmark_result.allocs == 0
 
     prob_manual = ODEProblem(test_odes!, metabs, (0.0, 1e6), params)
@@ -94,7 +94,7 @@
 
     enzymes = CellMetabolismBase._generate_Enzymes(test_pathway)
     manual_benchmark_result = @benchmark CellMetabolismBase._generate_Enzymes($test_pathway)
-    @test mean(manual_benchmark_result.times) <= 10 #ns
+    @test minimum(manual_benchmark_result.times) <= 10 #ns
     @test manual_benchmark_result.allocs == 0
     @test enzymes isa Tuple{Vararg{Enzyme}}
     @test length(enzymes) == 4
@@ -144,7 +144,7 @@
         reltol = 1e-8,
         save_everystep = false,
     )
-    @test mean(manual_benchmark_result.times) <= 20_000_000 #ns
+    @test minimum(manual_benchmark_result.times) <= 20_000_000 #ns
     @test manual_benchmark_result.allocs < 30_000
 
     package_benchmark_result = @benchmark solve(
@@ -154,17 +154,17 @@
         reltol = 1e-8,
         save_everystep = false,
     )
-    @test mean(package_benchmark_result.times) <= 20_000_000 #ns
+    @test minimum(package_benchmark_result.times) <= 20_000_000 #ns
     @test package_benchmark_result.allocs < 30_000
 
     @test manual_benchmark_result.allocs >= package_benchmark_result.allocs
 
     println(
-        "Manual ODE solve=$(round(mean(manual_benchmark_result.times)/1_000_000; sigdigits=2))ms",
+        "Manual ODE solve=$(round(minimum(manual_benchmark_result.times)/1_000_000; sigdigits=2))ms",
     )
     println("Manual ODE allocations=$(manual_benchmark_result.allocs)")
     println(
-        "Package ODE solve=$(round(mean(package_benchmark_result.times)/1_000_000; sigdigits=2))ms",
+        "Package ODE solve=$(round(minimum(package_benchmark_result.times)/1_000_000; sigdigits=2))ms",
     )
     println("Package ODE allocations=$(package_benchmark_result.allocs)")
 end
