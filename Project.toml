@@ -32,8 +32,3 @@ TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 
 [targets]
 test = ["Aqua", "JET", "Test", "TestItemRunner", "BenchmarkTools", "OrdinaryDiffEqFIRK", "CellMetabolism"]
-
-# TEMPORARY: the registered CellMetabolism caps CellMetabolismBase at <0.4, so its
-# updated branch is needed to test against this release. Remove before registering.
-[sources]
-CellMetabolism = {url = "https://github.com/DenisTitovLab/CellMetabolism.jl", rev = "bump-ordinarydiffeq-v7"}
