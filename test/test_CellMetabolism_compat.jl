@@ -51,6 +51,6 @@ end
         reltol = 1e-8,
     )
 
-    @test length(sols) == length(init_ensemble)
-    @test all(sol.retcode == SciMLBase.ReturnCode.Success for sol in sols)
+    @test length(sols.u) == length(init_ensemble)
+    @test all(sol.retcode == SciMLBase.ReturnCode.Success for sol in sols.u)
 end
