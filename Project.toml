@@ -1,7 +1,7 @@
 name = "CellMetabolismBase"
 uuid = "29f58b35-15e1-4d3c-99d7-eccaac145095"
-authors = ["Denis Titov <titov@berkeley.edu>  and contributors"]
 version = "0.4.0"
+authors = ["Denis Titov <titov@berkeley.edu>  and contributors"]
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -13,7 +13,7 @@ Aqua = "0.8.11"
 BenchmarkTools = "1.6"
 CellMetabolism = "0.3"
 Distributions = "0.25.117"
-JET = "0.10"
+JET = "0.10, 0.11"
 LabelledArrays = "1.16.0"
 OrdinaryDiffEqFIRK = "2"
 SciMLBase = "3"

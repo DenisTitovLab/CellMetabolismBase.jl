@@ -83,21 +83,24 @@
     @test enzymes(test_pathway) == expected_enzyme_names
     enzymes(test_pathway) isa Tuple{Vararg{Symbol}}
     benchmark_result = @benchmark enzymes($test_pathway)
-    @test minimum(benchmark_result.times) <= 20 #ns
+    # Non-@generated accessor: does real runtime work (_generate_Enzymes + map),
+    # so wall-time tracks the CI CPU (~17 ns on AMD znver3, ~42 ns on Intel icelake).
+    # 50 ns gives margin above the slowest observed runner. allocs == 0 is the exact guard.
+    @test minimum(benchmark_result.times) <= 50 #ns
     @test benchmark_result.allocs == 0
 
     # Test substrates function
     @test substrates(test_pathway) == expected_substrate_names
     substrates(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
     benchmark_result = @benchmark substrates($test_pathway)
-    @test minimum(benchmark_result.times) <= 20 #ns
+    @test minimum(benchmark_result.times) <= 50 #ns (non-@generated; see enzymes note)
     @test benchmark_result.allocs == 0
 
     # Test products function
     @test products(test_pathway) == expected_product_names
     products(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
     benchmark_result = @benchmark products($test_pathway)
-    @test minimum(benchmark_result.times) <= 20 #ns
+    @test minimum(benchmark_result.times) <= 50 #ns (non-@generated; see enzymes note)
     @test benchmark_result.allocs == 0
 
     # Test stoichiometric_matrix function
@@ -111,14 +114,14 @@
     @test activators(test_pathway) == expected_activator_names
     activators(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
     benchmark_result = @benchmark activators($test_pathway)
-    @test minimum(benchmark_result.times) <= 20 #ns
+    @test minimum(benchmark_result.times) <= 50 #ns (non-@generated; see enzymes note)
     @test benchmark_result.allocs == 0
 
     # Test inhibitors function
     @test inhibitors(test_pathway) == expected_inhibitor_names
     inhibitors(test_pathway) isa Tuple{Vararg{Tuple{Vararg{Symbol}}}}
     benchmark_result = @benchmark inhibitors($test_pathway)
-    @test minimum(benchmark_result.times) <= 20 #ns
+    @test minimum(benchmark_result.times) <= 50 #ns (non-@generated; see enzymes note)
     @test benchmark_result.allocs == 0
 
     enzyme_instances = CellMetabolismBase._generate_Enzymes(test_pathway)
