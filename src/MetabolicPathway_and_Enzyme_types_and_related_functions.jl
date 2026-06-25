@@ -1,4 +1,4 @@
-using LabelledArrays
+using LabelledArrays, LinearAlgebra
 
 """
     MetabolicPathway{ConstantMetabolites,Enzymes}
@@ -382,4 +382,206 @@ to enzymes ordered as in `reactants(pathway)` and `enzymes(pathway)`.
         end
     end
     return s_matrix
+end
+
+"""
+Heuristic for Dynamic Column Ordering in Fourier-Motzkin Elimination.
+
+Instead of eliminating columns in a fixed order, this function calculates a
+"cost" for eliminating each remaining column. The cost estimates the net change
+in the number of rows: (number of new rows created) - (number of old rows destroyed).
+
+By choosing the column that minimizes this localized row growth, we drastically
+delay or entirely avoid the combinatorial explosion typical of this algorithm.
+"""
+function _find_best_column(dots_matrix, remaining_cols)
+    best_col = -1
+    min_cost = typemax(Int) # Initialize with the largest possible integer
+
+    for j in remaining_cols
+        col_values = dots_matrix[:, j]
+
+        # Count how many rows have strictly positive vs strictly negative entries
+        # in the current column being evaluated.
+        num_pos = count(>(0), col_values)
+        num_neg = count(<(0), col_values)
+
+        # Linear combinations will happen between every positive and negative pair:
+        # New rows generated = num_pos * num_neg
+        # Old rows eliminated = num_pos + num_neg
+        cost = (num_pos * num_neg) - (num_pos + num_neg)
+
+        # Track the column that minimizes this row-growth metric
+        if cost < min_cost
+            min_cost = cost
+            best_col = j
+        end
+    end
+    return best_col
+end
+
+"""
+Helper to find the matrix of minimal conserved moieties. If pool A is a subset of pool B,
+then B is not minimal and is removed.
+"""
+function _find_minimal_conserved_moieties(R)
+    num_rows = size(R, 1)
+
+    # Base cases: 0 or 1 row means it's already minimal
+    if num_rows <= 1
+        return R
+    end
+
+    # Get the indeces and sizes of each candidate moiety
+    candidate_moieties = [BitSet(findall(!=(0), row)) for row in eachrow(R)]
+    sizes = [length(i) for i in candidate_moieties]
+
+    # Sort rows by their support size (smallest first)
+    p_sort = sortperm(sizes)
+    R = R[p_sort, :]
+    candidate_moieties = candidate_moieties[p_sort]
+
+    keep = trues(num_rows)
+    for i = 1:num_rows
+        if !keep[i] # if already false continue to the next
+            continue
+        end
+        for k = (i+1):num_rows
+            if !keep[k] # if already false continue to the next
+                continue
+            end
+            # If candidate_moiety i is a subset of candidate_moiety k, then
+            # k is not minimal and is discarded
+            if issubset(candidate_moieties[i], candidate_moieties[k])
+                keep[k] = false
+            end
+        end
+    end
+    return R[keep, :]
+end
+
+"""
+Computes the strictly positive left null space of a stoichiometric matrix `S`.
+Mathematically, it solves for all vectors R >= 0 such that R * S = 0. Each row in the
+returned matrix R represents an "extreme ray", which physically corresponds to a
+conservation relation (conserved moiety pool) in the metabolic network. This algorithm is
+explained in more detail in Schuster and Hilgetag 1995, and Schuster and Höfer 1991.
+
+References
+    Schuster, Stefan, and Claus Hilgetag. "What information about the conserved-moiety
+    structure of chemical reaction systems can be derived from their stoichiometry?." The
+    Journal of Physical Chemistry 99.20 (1995): 8017-8023.
+
+    Schuster, Stefan, and Thomas Höfer. "Determining all extreme semi-positive conservation
+    relations in chemical reaction systems: a test criterion for conservativity." Journal
+    of the Chemical Society, Faraday Transactions 87.16 (1991): 2561-2566.
+"""
+function _fourier_motzkin(S)
+    m, n = size(S)
+
+    # STEP 1: Initialize R as an Identity Matrix.
+    # This represents the strictly positive orthant (R >= 0).
+    # Every metabolite starts as its own independent pool with a coefficient of 1.
+    R = Matrix{BigInt}(I, m, m)
+
+    remaining_cols = collect(1:n)
+
+    while !isempty(remaining_cols)
+        current_dots = R * S[:, remaining_cols]
+
+        # Find the best reaction to process
+        best_idx = _find_best_column(current_dots, 1:length(remaining_cols))
+
+        # Get the index and value of the reaction being processed in the current loop
+        j = remaining_cols[best_idx]
+        v = S[:, j]
+        # Delete the current reaction from the remaining reactions
+        deleteat!(remaining_cols, best_idx)
+
+        # STEP 2: Evaluate the reaction's effect on current pools (R * v).
+        # > 0 means the pool grows (produced by reaction)
+        # < 0 means the pool shrinks (consumed by reaction)
+        # == 0 means the pool is conserved (unaffected by reaction)
+        dots = R * v
+        pos_rays = findall(>(0), dots)
+        neg_rays = findall(<(0), dots)
+        zero_rays = findall(==(0), dots)
+
+        # STEP 3: Keep the pools that are already conserved.
+        # These vectors already satisfy R * v = 0 for this specific reaction.
+        new_R = R[zero_rays, :]
+
+        # STEP 4: Combine growing and shrinking pools to create new conserved pools.
+        # By cross-multiplying, we perfectly cancel out the reaction's effect,
+        # forcing the new combinations to satisfy R * v = 0.
+        # Because we only ever add positive vectors together, R strictly remains >= 0.
+        for pos in pos_rays
+            for neg in neg_rays
+                r_new = dots[pos] * R[neg, :] - dots[neg] * R[pos, :]
+
+                # Simplify the pool's coefficients (e.g. 2A + 2B -> 1A + 1B)
+                row_gcd = reduce(gcd, r_new)
+                if row_gcd > 1
+                    r_new .÷= row_gcd
+                end
+
+                new_R = vcat(new_R, r_new')
+            end
+        end
+
+        R = new_R
+        num_rows = size(R, 1)
+
+        # STEP 5: Keep only the fundamental building blocks (Extreme Rays).
+        if num_rows > 0
+            # Remove entirely empty pools
+            keep_nonzeros = [any(!=(0), row) for row in eachrow(R)]
+            R = R[keep_nonzeros, :]
+            num_rows = size(R, 1)
+
+            R = _find_minimal_conserved_moieties(R)
+        end
+    end
+    # After eliminating all columns (reactions), the remaining rows in R satisfy both
+    # R >= 0 and R * S = 0 for the entire matrix.
+    return R
+end
+
+"""
+    conserved_moieties(pathway::MetabolicPathway)
+
+Uses a Fourier-Motzkin Elimination algorithm to return the conserved moieties of the
+metabolic pathway. The sum of each of these conserved moieties remains constant throughout
+a simulation.
+
+References
+    Schuster, Stefan, and Claus Hilgetag. "What information about the conserved-moiety
+    structure of chemical reaction systems can be derived from their stoichiometry?." The
+    Journal of Physical Chemistry 99.20 (1995): 8017-8023.
+
+    Schuster, Stefan, and Thomas Höfer. "Determining all extreme semi-positive conservation
+    relations in chemical reaction systems: a test criterion for conservativity." Journal
+    of the Chemical Society, Faraday Transactions 87.16 (1991): 2561-2566.
+"""
+@generated function conserved_moieties(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+) where {ConstMetabs,Enzs}
+    metabolites = reactants(MetabolicPathway{ConstMetabs,Enzs}())
+    S = stoichiometric_matrix(MetabolicPathway{ConstMetabs,Enzs}())
+    R = _fourier_motzkin(S)
+    @assert iszero(R * S) "Conserved moieties must be in the left nullspace of S."
+    @assert all(R .>= 0) "Conserved moieties must be all be positive."
+
+    conserved_moieties = String[]
+    for (i, row) in enumerate(eachrow(R))
+        terms = String[]
+        for (j, value) in enumerate(row)
+            if value != 0
+                push!(terms, "$(value)⋅$(metabolites[j])")
+            end
+        end
+        push!(conserved_moieties, "$i: " * join(terms, " + "))
+    end
+    conserved_moieties_string = join(conserved_moieties, "\n")
+    return conserved_moieties_string
 end
