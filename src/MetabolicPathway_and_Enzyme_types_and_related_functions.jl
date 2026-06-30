@@ -585,3 +585,82 @@ References
     conserved_moieties_string = join(conserved_moieties, "\n")
     return conserved_moieties_string
 end
+
+"""
+    _find_fixed_fluxes(pathway::MetabolicPathway, (enzyme_name = fixed_rate,))
+
+Finds the steady state fluxes of a pathway required to support the fluxes defined in
+`fixed_enzyme_fluxes`. Returns two vectors: `demand_driven_fluxes` and `independent_fluxes`.
+The `demand_driven_fluxes` are those that depend on the fluxes set in `fixed_enzyme_fluxes`.
+The `independent_fluxes` do not depend on the demand set, these are internal cycles or
+parallel pathways.
+
+References
+R. Schuster, S. Schuster, Refined algorithm and computer program for calculating all
+non–negative fluxes admissible in steady states of biochemical reaction systems with or
+without some flux rates fixed, Bioinformatics, Volume 9, Issue 1, February 1993,
+Pages 79–85, https://doi.org/10.1093/bioinformatics/9.1.79
+"""
+function _find_fixed_fluxes(
+    ::MetabolicPathway{ConstMetabs,Enzs},
+    fixed_enzyme_fluxes::NamedTuple{enzyme_name,fixed_rate},
+) where {enzyme_name,fixed_rate<:Tuple{Vararg{Integer}},ConstMetabs,Enzs}
+    pathway_enzymes = enzymes(MetabolicPathway{ConstMetabs,Enzs}())
+    S = stoichiometric_matrix(MetabolicPathway{ConstMetabs,Enzs}())
+
+    for e ∈ keys(fixed_enzyme_fluxes)
+        if e ∉ pathway_enzymes
+            throw(ArgumentError("The enzyme '$e' was not found in the provided pathway."))
+        end
+    end
+
+    fixed_enzyme_indeces =
+        [findfirst(==(enzyme), pathway_enzymes) for enzyme in keys(fixed_enzyme_fluxes)]
+    fixed_fluxes = collect(values(fixed_enzyme_fluxes))
+
+    # Create two stoichiometric matrices, one for the enzymes whose fluxes we want to find
+    # (S_1) and another for those enzymes that are fixed (S_2)
+    S_1 = S[:, setdiff(1:end, fixed_enzyme_indeces)]
+    S_2 = S[:, fixed_enzyme_indeces]
+    W = S_2 * fixed_fluxes # Fix the fluxes of enzymes in S_2
+    S_1_augmented = [S_1 W]
+    flux_vectors = _fourier_motzkin(S_1_augmented')
+
+    demand_driven_fluxes =
+        NamedTuple{Tuple(pathway_enzymes),NTuple{length(pathway_enzymes),Rational{Int}}}[]
+    independent_fluxes =
+        NamedTuple{Tuple(pathway_enzymes),NTuple{length(pathway_enzymes),Rational{Int}}}[]
+
+    # Each flux vector that has a non-zero value as the last value are driven by the demand
+    # set in `fixed_enzyme_fluxes`. Those flux vectors that end in zero are independent of
+    # the demand set, these represent internal cycles or parallel pathways that do not
+    # depend on the demand set in `fixed_enzyme_fluxes`.
+    for row in eachrow(flux_vectors)
+        if row[end] != 0
+            flux_vector = vec(row)
+            normalized_flux_vector = flux_vector .// flux_vector[end]
+            normalized_flux_vector = normalized_flux_vector[begin:(end-1)]
+            # Insert the fixed fluxes back into the normalized_flux_vector
+            for (i, j) in enumerate(fixed_enzyme_indeces)
+                insert!(normalized_flux_vector, j, fixed_fluxes[i])
+            end
+            @assert iszero(S * normalized_flux_vector) "The flux vector should only have steady state fluxes."
+            flux_vector_array =
+                NamedTuple{Tuple(pathway_enzymes)}(Tuple(normalized_flux_vector))
+            push!(demand_driven_fluxes, flux_vector_array)
+        else
+            extreme_ray_vector = vec(row)
+            extreme_ray_vector = extreme_ray_vector[begin:(end-1)]
+            # Independent flux vectors (extreme rays) only satisfy S * v = 0, when the
+            # fixed_enzyme_fluxes are zero
+            for j in fixed_enzyme_indeces
+                insert!(extreme_ray_vector, j, 0)
+            end
+            @assert iszero(S * extreme_ray_vector) "The extreme ray vector should only have steady state fluxes."
+            extreme_ray_array =
+                NamedTuple{Tuple(pathway_enzymes)}(Tuple(extreme_ray_vector))
+            push!(independent_fluxes, extreme_ray_array)
+        end
+    end
+    return demand_driven_fluxes, independent_fluxes
+end

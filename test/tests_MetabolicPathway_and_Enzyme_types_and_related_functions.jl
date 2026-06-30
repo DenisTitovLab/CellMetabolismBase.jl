@@ -715,3 +715,309 @@ end
         @test glycolysis_conserved_moieties == expected_glycolysis_conserved_moieties
     end
 end
+
+@testitem "Finding steady state fluxes." setup = [GenerateRandomStoichiometricMatrix] begin
+
+    @testset "Fourier-Motzkin Fundamentals for finding steady state rates." begin
+        reactions = rand(1:100)
+        # 1.3 times more metabolites than reactions (similar to Glycolysis and TCA cycle)
+        metabolites = round(Int, 1.31 * reactions)
+        S_random = generate_random_stoichiometric_matrix(metabolites, reactions)
+        # Finding steady state vectors relies on running _fourier_motzkin on Sᵀ
+        R_random = CellMetabolismBase._fourier_motzkin(S_random')
+
+        # Test 1: all values returned are positive
+        @test all(R_random .>= 0)
+        for row_i in eachrow(R_random)
+            # Test 2: no row is entirely zeros
+            @test !iszero(row_i)
+            # Test 3: each row is in its simplest form
+            @test gcd(row_i) == 1
+            for row_j in eachrow(R_random)
+                if row_i != row_j
+                    # Test 4: no row is a subset of another row
+                    @test !issubset(
+                        findall(x -> x != 0, row_i),
+                        findall(x -> x != 0, row_j),
+                    )
+                end
+            end
+        end
+    end
+
+    @testset "_find_fixed_fluxes behaviour on a toy pathway." begin
+        # Simple conversion A → B → C → D
+        toy_pathway = MetabolicPathway(
+            (:A, :D),
+            ((:Enz1, (:A,), (:B,)), (:Enz2, (:B,), (:C,)), (:Enz3, (:C,), (:D,))),
+        )
+
+        # Set the flux of Enz2 to be equal to 1. This requires Enz1 to have a flux equal to 1
+        demand_driven_fluxes, independent_fluxes =
+            CellMetabolismBase._find_fixed_fluxes(toy_pathway, (Enz2 = 1,))
+
+        # Test 1: The returned fixed fluxes are correct
+        @test demand_driven_fluxes == [(Enz1 = 1, Enz2 = 1, Enz3 = 1)]
+
+        # Test 2: There are no fluxes that are independent to the flux of Enz2
+        @test independent_fluxes == []
+
+        # Test 3: The returned fluxes are steady state fluxes such that S * v = 0
+        @test iszero(
+            stoichiometric_matrix(toy_pathway) * collect(values(demand_driven_fluxes[1])),
+        )
+
+        # Test 4: No fixed fluxes are found when trying an impossible combination of fixed
+        # fluxes
+        demand_driven_fluxes, independent_fluxes =
+            CellMetabolismBase._find_fixed_fluxes(toy_pathway, (Enz1 = 5, Enz2 = 1))
+        @test demand_driven_fluxes == [] && independent_fluxes == []
+
+        # Test 5: Error thrown if the fixed flux set is a float
+        @test_throws MethodError CellMetabolismBase._find_fixed_fluxes(
+            toy_pathway,
+            (Enz2 = 1.5),
+        )
+
+        # Test 6: Error thrown if an enzyme is fixed but not present in pathway
+        @test_throws ArgumentError(
+            "The enzyme 'Enz5' was not found in the provided pathway.",
+        ) CellMetabolismBase._find_fixed_fluxes(toy_pathway, (Enz5 = 1,))
+
+        # Test 7: Correct error is thrown if one enzyme is not present in pathway
+        @test_throws ArgumentError(
+            "The enzyme 'Enz5' was not found in the provided pathway.",
+        ) CellMetabolismBase._find_fixed_fluxes(toy_pathway, (Enz2 = 1, Enz5 = 1))
+    end
+
+    @testset "_find_fixed_fluxes gets the correct steady state fluxes for a known pathway." begin
+        # This test pathway and the known solutions for the steady state fluxes come from
+        # Schuster R, Schuster S. Comput Appl Biosci, 1993. PMID: 8435772.
+        schuster_pathway = MetabolicPathway(
+            (:Glucose_out, :Lactate, :Fatty_acid, :Protein, :CO₂_out),
+            (
+                (:INP, (:Glucose_out,), (:Glucose,)),
+                (:GLY, (:Glucose,), (:Pyruvate, :Pyruvate)),
+                (:PDH, (:Pyruvate,), (:Acetyl_CoA, :CO₂)),
+                (:CST, (:Acetyl_CoA, :Oxaloacetate), (:αKG, :CO₂)),
+                (:FUM, (:αKG,), (:Oxaloacetate, :CO₂)),
+                (:GNG, (:Oxaloacetate, :Oxaloacetate), (:Glucose, :CO₂, :CO₂)),
+                (:PYC, (:Pyruvate, :CO₂), (:Oxaloacetate,)),
+                (:LDH, (:Pyruvate,), (:Lactate,)),
+                (:FAF, (:Acetyl_CoA,), (:Fatty_acid,)),
+                (:PRF, (:αKG, :Oxaloacetate), (:Protein,)),
+                (:PRD, (:Protein,), (:αKG, :Oxaloacetate)),
+                (:COO, (:CO₂,), (:CO₂_out,)),
+            ),
+        )
+        S = stoichiometric_matrix(schuster_pathway)
+        @testset "With the flux of INP = 1, and flux of LDH = 2" begin
+            known_demand_driven_fluxes = [(
+                INP = 1,
+                GLY = 1,
+                PDH = 0,
+                CST = 0,
+                FUM = 0,
+                GNG = 0,
+                PYC = 0,
+                LDH = 2,
+                FAF = 0,
+                PRF = 0,
+                PRD = 0,
+                COO = 0,
+            )]
+            known_independent_fluxes = [
+                (
+                    INP = 0,
+                    GLY = 0,
+                    PDH = 0,
+                    CST = 0,
+                    FUM = 0,
+                    GNG = 0,
+                    PYC = 0,
+                    LDH = 0,
+                    FAF = 0,
+                    PRF = 1,
+                    PRD = 1,
+                    COO = 0,
+                ),
+                (
+                    INP = 0,
+                    GLY = 1,
+                    PDH = 0,
+                    CST = 0,
+                    FUM = 0,
+                    GNG = 1,
+                    PYC = 2,
+                    LDH = 0,
+                    FAF = 0,
+                    PRF = 0,
+                    PRD = 0,
+                    COO = 0,
+                ),
+                (
+                    INP = 0,
+                    GLY = 1,
+                    PDH = 2,
+                    CST = 0,
+                    FUM = 1,
+                    GNG = 1,
+                    PYC = 0,
+                    LDH = 0,
+                    FAF = 2,
+                    PRF = 0,
+                    PRD = 1,
+                    COO = 5,
+                ),
+                (
+                    INP = 0,
+                    GLY = 1,
+                    PDH = 2,
+                    CST = 2,
+                    FUM = 3,
+                    GNG = 1,
+                    PYC = 0,
+                    LDH = 0,
+                    FAF = 0,
+                    PRF = 0,
+                    PRD = 1,
+                    COO = 9,
+                ),
+            ]
+            demand_driven_fluxes, independent_fluxes =
+                CellMetabolismBase._find_fixed_fluxes(schuster_pathway, (INP = 1, LDH = 2))
+            # Test that the known fluxes match the returned ones
+            @test known_demand_driven_fluxes == demand_driven_fluxes
+            @test known_independent_fluxes == independent_fluxes
+
+            # Test that each flux vector returned is a steady state vector (S * v = 0)
+            test_result_steady_state_vector = Bool[]
+            for vector in demand_driven_fluxes
+                push!(test_result_steady_state_vector, iszero(S * collect(values(vector))))
+            end
+            for vector in independent_fluxes
+                push!(test_result_steady_state_vector, iszero(S * collect(values(vector))))
+            end
+            @test all(test_result_steady_state_vector)
+        end
+        @testset "With the flux of INP = 1, and flux of LDH = 1" begin
+            known_demand_driven_fluxes = [
+                (
+                    INP = 1,
+                    GLY = 1,
+                    PDH = 1,
+                    CST = 0,
+                    FUM = 0,
+                    GNG = 0,
+                    PYC = 0,
+                    LDH = 1,
+                    FAF = 1,
+                    PRF = 0,
+                    PRD = 0,
+                    COO = 1,
+                ),
+                (
+                    INP = 1,
+                    GLY = 1,
+                    PDH = 1//3,
+                    CST = 1//3,
+                    FUM = 0,
+                    GNG = 0,
+                    PYC = 2//3,
+                    LDH = 1,
+                    FAF = 0,
+                    PRF = 1//3,
+                    PRD = 0,
+                    COO = 0,
+                ),
+                (
+                    INP = 1,
+                    GLY = 1,
+                    PDH = 1,
+                    CST = 1,
+                    FUM = 1,
+                    GNG = 0,
+                    PYC = 0,
+                    LDH = 1,
+                    FAF = 0,
+                    PRF = 0,
+                    PRD = 0,
+                    COO = 3,
+                ),
+            ]
+            known_independent_fluxes = [
+                (
+                    INP = 0,
+                    GLY = 0,
+                    PDH = 0,
+                    CST = 0,
+                    FUM = 0,
+                    GNG = 0,
+                    PYC = 0,
+                    LDH = 0,
+                    FAF = 0,
+                    PRF = 1,
+                    PRD = 1,
+                    COO = 0,
+                ),
+                (
+                    INP = 0,
+                    GLY = 1,
+                    PDH = 0,
+                    CST = 0,
+                    FUM = 0,
+                    GNG = 1,
+                    PYC = 2,
+                    LDH = 0,
+                    FAF = 0,
+                    PRF = 0,
+                    PRD = 0,
+                    COO = 0,
+                ),
+                (
+                    INP = 0,
+                    GLY = 1,
+                    PDH = 2,
+                    CST = 0,
+                    FUM = 1,
+                    GNG = 1,
+                    PYC = 0,
+                    LDH = 0,
+                    FAF = 2,
+                    PRF = 0,
+                    PRD = 1,
+                    COO = 5,
+                ),
+                (
+                    INP = 0,
+                    GLY = 1,
+                    PDH = 2,
+                    CST = 2,
+                    FUM = 3,
+                    GNG = 1,
+                    PYC = 0,
+                    LDH = 0,
+                    FAF = 0,
+                    PRF = 0,
+                    PRD = 1,
+                    COO = 9,
+                ),
+            ]
+            demand_driven_fluxes, independent_fluxes =
+                CellMetabolismBase._find_fixed_fluxes(schuster_pathway, (INP = 1, LDH = 1))
+            # Test that the known fluxes match the returned ones
+            @test known_demand_driven_fluxes == demand_driven_fluxes
+            @test known_independent_fluxes == independent_fluxes
+
+            # Test that each flux vector returned is a steady state vector (S * v = 0)
+            test_result_steady_state_vector = Bool[]
+            for vector in demand_driven_fluxes
+                push!(test_result_steady_state_vector, iszero(S * collect(values(vector))))
+            end
+            for vector in independent_fluxes
+                push!(test_result_steady_state_vector, iszero(S * collect(values(vector))))
+            end
+            @test all(test_result_steady_state_vector)
+        end
+    end
+end
